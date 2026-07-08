@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Enrollment Registry</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
@@ -181,6 +183,28 @@
     .table-wrap tbody td[data-label]:not(:empty)::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
     .table-wrap tbody td:empty, .table-wrap tbody td[data-label=""] { display: none; }
   }
+
+  /* ── PROFILE MODAL ────────────────────────────────────────────────── */
+  .profile-photo-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .profile-photo { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 36px; color: var(--muted); }
+  .profile-details { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+  .profile-details .pd-item { font-size: 13px; }
+  .profile-details .pd-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
+  .profile-details .pd-full { grid-column: span 2; }
+  .modal-footer-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* ── ID CARD TEMPLATE (offscreen, captured via html2canvas) ─────────── */
+  #idCardTemplate { position: fixed; top: -9999px; left: -9999px; width: 400px; height: 252px; border-radius: 14px; overflow: hidden; font-family: 'DM Sans', sans-serif; background: #ffffff; box-shadow: 0 0 0 1px #E5E7EB; }
+  #idCardTemplate .idc-header { background: #1A1D23; color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
+  #idCardTemplate .idc-header .idc-mark { width: 22px; height: 22px; border-radius: 6px; background: #3B82F6; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 13px; }
+  #idCardTemplate .idc-header .idc-org { font-size: 12px; font-weight: 600; }
+  #idCardTemplate .idc-body { display: flex; gap: 14px; padding: 14px 16px; }
+  #idCardTemplate .idc-photo { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; background: #F3F4F6; border: 1px solid #E5E7EB; flex-shrink: 0; }
+  #idCardTemplate .idc-name { font-family: 'DM Serif Display', serif; font-size: 17px; color: #111827; margin-bottom: 2px; }
+  #idCardTemplate .idc-id { font-size: 11px; color: #6B7280; margin-bottom: 8px; }
+  #idCardTemplate .idc-row { font-size: 11px; color: #374151; margin-bottom: 3px; }
+  #idCardTemplate .idc-row b { color: #111827; }
+  #idCardTemplate .idc-footer { padding: 6px 16px 10px; font-size: 9px; color: #9CA3AF; border-top: 1px dashed #E5E7EB; }
 </style>
 </head>
 <body>
@@ -217,6 +241,51 @@
 </header>
 
 <div class="toast-wrap" id="toastWrap"></div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Student Profile</span>
+      <button class="modal-close" onclick="closeProfileModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="profile-photo-wrap">
+        <div class="profile-photo" id="profilePhotoBox">👤</div>
+        <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('profilePhotoInput').click()" id="changePhotoBtn">Change Photo</button>
+      </div>
+      <div class="profile-details" id="profileDetails"></div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-wrap">
+        <button class="btn btn-ghost btn-sm" onclick="closeProfileModal()">Close</button>
+        <button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>
+        <button class="btn btn-success btn-sm" onclick="downloadIdCard('png')">⬇ ID Card (PNG)</button>
+        <button class="btn btn-success btn-sm" onclick="downloadIdCard('pdf')">⬇ ID Card (PDF)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HIDDEN ID CARD TEMPLATE (rendered offscreen, captured via html2canvas) -->
+<div id="idCardTemplate">
+  <div class="idc-header">
+    <div class="idc-mark">E</div>
+    <div class="idc-org">CU Enrollment Registry</div>
+  </div>
+  <div class="idc-body">
+    <img class="idc-photo" id="idcPhoto" src="" alt="">
+    <div>
+      <div class="idc-name" id="idcName"></div>
+      <div class="idc-id" id="idcId"></div>
+      <div class="idc-row"><b>Course:</b> <span id="idcCourse"></span></div>
+      <div class="idc-row"><b>Campus:</b> <span id="idcCampus"></span></div>
+      <div class="idc-row"><b>School:</b> <span id="idcSchool"></span></div>
+    </div>
+  </div>
+  <div class="idc-footer">This ID is property of CU Enrollment Registry. If found, please return.</div>
+</div>
 
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="editModal">
@@ -1575,6 +1644,7 @@ function renderTable(rows) {
       <td class="td-muted" data-label="Memo">${r.isCamp && r.school ? `<span style="font-size:11px;font-weight:600;">${r.school}</span>` : (r.memo || '—')}</td>
       <td data-label="Last Edited">${lastEdit}</td>
       <td onclick="event.stopPropagation();" data-label="" style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openProfile(${r.rowNo})" style="padding:0 8px;">Profile</button>
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 8px;">Edit</button>
         ${archiveBtn}
       </td>
@@ -1804,6 +1874,159 @@ function exportXLSX(onlyFiltered) {
 
 // ── EDIT MODAL ────────────────────────────────────────────────────────────────
 let editingIndex = -1;
+
+// ── PROFILE MODAL ─────────────────────────────────────────────────────────────
+let profileRowNo = null;
+
+function fieldRow(label, value, full) {
+  if (value == null || value === '') return '';
+  return `<div class="pd-item${full ? ' pd-full' : ''}"><div class="pd-label">${label}</div><div>${value}</div></div>`;
+}
+
+function openProfile(rowNo) {
+  const r = allRecords.find(rec => rec.rowNo === rowNo);
+  if (!r) { toast('Could not find that record. Try refreshing.', 'error'); return; }
+  profileRowNo = rowNo;
+
+  const photoBox = document.getElementById('profilePhotoBox');
+  if (r.photo) {
+    photoBox.innerHTML = `<img class="profile-photo" src="${r.photo}" alt="">`;
+  } else {
+    photoBox.outerHTML = '<div class="profile-photo" id="profilePhotoBox">👤</div>';
+  }
+
+  document.getElementById('profileDetails').innerHTML = [
+    fieldRow('Student ID', r.studentId, true),
+    fieldRow('Full Name', r.fullName, true),
+    fieldRow('Country', r.country),
+    fieldRow('Sex', r.sex),
+    fieldRow('Course', r.course),
+    fieldRow('Type', r.type),
+    fieldRow('Campus', r.campus),
+    fieldRow('School', r.isCamp ? r.school : ''),
+    fieldRow('Date Started', r.dateStarted),
+    fieldRow('Date Ended', r.dateEnded),
+    fieldRow('Graduation', r.dateGrad),
+    fieldRow('Birth Day', r.birthDay),
+    fieldRow('Weeks', r.weeks),
+    fieldRow('Agency', r.agency),
+    fieldRow('Arrival Date', r.arrivalDate),
+    fieldRow('Flight No.', r.flightNo),
+    fieldRow('Arrival Time', r.arrivalTime),
+    fieldRow('Memo', r.memo, true),
+    fieldRow('Last Edited By', r.lastEditedBy),
+    fieldRow('Last Edited At', r.lastEditedAt),
+    r.archived ? fieldRow('Status', '🗄 Archived') : '',
+  ].join('');
+
+  document.getElementById('profileModal').classList.add('open');
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal').classList.remove('open');
+  profileRowNo = null;
+}
+
+document.getElementById('profileModal').addEventListener('click', function(e) {
+  if (e.target === this) closeProfileModal();
+});
+
+function editFromProfile() {
+  const rowNo = profileRowNo;
+  closeProfileModal();
+  if (rowNo != null) openEditByRow(rowNo);
+}
+
+// Resizes/compresses an image file down to a small square-ish avatar so it
+// comfortably fits in a single Google Sheets cell (well under ~50k chars).
+function resizeImageToDataUri(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) { if (width > maxDim) { height *= maxDim / width; width = maxDim; } }
+        else { if (height > maxDim) { width *= maxDim / height; height = maxDim; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoSelect(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file || !profileRowNo) return;
+  if (!file.type.startsWith('image/')) { toast('Please choose an image file.', 'error'); return; }
+
+  const btn = document.getElementById('changePhotoBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+
+  try {
+    let dataUri = await resizeImageToDataUri(file, 240, 0.7);
+    // If still too big (very detailed photo), compress further.
+    if (dataUri.length > 45000) dataUri = await resizeImageToDataUri(file, 160, 0.5);
+
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'uploadPhoto', rowNo: profileRowNo, photoDataUri: dataUri })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      const i = allRecords.findIndex(rec => rec.rowNo === profileRowNo);
+      if (i !== -1) allRecords[i].photo = dataUri;
+      document.getElementById('profilePhotoBox').outerHTML = `<img class="profile-photo" id="profilePhotoBox" src="${dataUri}" alt="">`;
+      toast('Photo updated!', 'success');
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch (e) {
+    toast('Connection error while uploading photo.', 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Change Photo';
+}
+
+// ── ID CARD GENERATION ────────────────────────────────────────────────────────
+async function downloadIdCard(format) {
+  const r = allRecords.find(rec => rec.rowNo === profileRowNo);
+  if (!r) return;
+
+  document.getElementById('idcPhoto').src   = r.photo || 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="84" height="84"><rect width="84" height="84" fill="%23F3F4F6"/></svg>');
+  document.getElementById('idcName').textContent   = r.fullName || '—';
+  document.getElementById('idcId').textContent     = 'ID: ' + (r.studentId || '—');
+  document.getElementById('idcCourse').textContent  = r.course || '—';
+  document.getElementById('idcCampus').textContent  = r.campus || '—';
+  document.getElementById('idcSchool').textContent  = (r.isCamp && r.school) ? r.school : '—';
+
+  const el = document.getElementById('idCardTemplate');
+  try {
+    const canvas = await html2canvas(el, { scale: 3, backgroundColor: '#ffffff' });
+    const safeId = (r.studentId || r.fullName || 'student').toString().replace(/[^a-z0-9]/gi, '_');
+
+    if (format === 'png') {
+      const link = document.createElement('a');
+      link.download = `id_card_${safeId}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } else {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`id_card_${safeId}.pdf`);
+    }
+    toast('ID card downloaded!', 'success');
+  } catch (e) {
+    toast('Could not generate ID card.', 'error');
+  }
+}
 
 function openEditByRow(rowNo) {
   const i = allRecords.findIndex(rec => rec.rowNo === rowNo);
