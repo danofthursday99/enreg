@@ -139,6 +139,48 @@
   .user-email { font-size: 12px; color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .logout-btn { background: none; border: 1.5px solid var(--border); color: var(--muted); border-radius: 7px; height: 30px; padding: 0 12px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
   .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── DASHBOARD STATS BAR ──────────────────────────────────────────── */
+  .stats-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .stat-box { flex: 1 1 140px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .stat-box .stat-num { font-family: 'DM Serif Display', serif; font-size: 24px; line-height: 1.1; }
+  .stat-box .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .03em; }
+
+  /* ── BULK ACTION BAR ──────────────────────────────────────────────── */
+  .bulk-bar { display: none; align-items: center; gap: 10px; background: var(--accent-lt); border: 1px solid #BFDBFE; border-radius: 8px; padding: 8px 14px; margin-bottom: 12px; font-size: 12.5px; }
+  .bulk-bar.show { display: flex; }
+  .bulk-bar #bulkCount { font-weight: 600; margin-right: 6px; }
+  .row-checkbox, #selectAllBox { width: 16px; height: 16px; cursor: pointer; }
+  tr.row-selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .archived-row { opacity: .55; }
+
+  /* ── PAGINATION ───────────────────────────────────────────────────── */
+  .pagination-bar { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0 4px; font-size: 12.5px; color: var(--muted); }
+  .pagination-bar button { background: none; border: 1px solid var(--border); border-radius: 6px; height: 30px; padding: 0 12px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text); }
+  .pagination-bar button:disabled { opacity: .4; cursor: default; }
+  .pagination-bar button:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── PRINT VIEW ───────────────────────────────────────────────────── */
+  @media print {
+    .login-overlay, .site-header, .tabs, .search-bar, .bulk-bar, .pagination-bar,
+    .modal-overlay, .toast-wrap, th:first-child, td:first-child,
+    th:last-child, td:last-child { display: none !important; }
+    body, .app-shell { background: white !important; }
+    .card { box-shadow: none !important; border: none !important; }
+    table { width: 100% !important; }
+  }
+
+  /* ── MOBILE RESPONSIVE TABLE ──────────────────────────────────────── */
+  @media (max-width: 720px) {
+    .stats-bar { gap: 8px; }
+    .search-bar { flex-direction: column; align-items: stretch; }
+    .table-wrap table, .table-wrap thead, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+    .table-wrap thead { display: none; }
+    .table-wrap tbody tr { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; padding: 10px 12px; }
+    .table-wrap tbody td { padding: 4px 0; border: none; }
+    .table-wrap tbody td[data-label]:not(:empty)::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+    .table-wrap tbody td:empty, .table-wrap tbody td[data-label=""] { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -466,6 +508,7 @@
   <!-- TAB: RECORDS -->
   <div class="tab-panel" id="tab-records">
     <div class="card">
+      <div class="stats-bar" id="statsBar"></div>
       <div class="search-bar">
         <input type="text" id="searchQuery" placeholder="Search by name or ID…" oninput="filterTable()">
         <input type="text" id="searchCountry" placeholder="Country…" oninput="filterTable()">
@@ -486,6 +529,11 @@
           <option>CWA-Mabolo</option>
           <option>CWA-USPF</option>
           <option>CWA-IAU</option>
+        </select>
+        <select id="searchArchived" onchange="loadRecords()">
+          <option value="active">Active only</option>
+          <option value="all">Active + Archived</option>
+          <option value="archived">Archived only</option>
         </select>
         <select id="sortDropdown" onchange="sortFromDropdown()">
           <option value="">Sort by…</option>
@@ -529,12 +577,21 @@
         <button class="btn btn-ghost" style="height:36px;padding:0 14px;font-size:12px;" onclick="loadRecords()">↻ Refresh</button>
         <button class="btn btn-success" style="height:36px;padding:0 14px;font-size:12px;" onclick="exportXLSX(false)" title="Export every record, ignoring current search/sort">⬇ Export All</button>
         <button class="btn btn-success" style="height:36px;padding:0 14px;font-size:12px;" onclick="exportXLSX(true)" title="Export only what's currently shown (matches your search + sort)">⬇ Export Filtered</button>
+        <button class="btn btn-ghost" style="height:36px;padding:0 14px;font-size:12px;" onclick="printRecords()" title="Print a clean version of the currently filtered list">🖶 Print</button>
         <span class="record-count" id="recordCount"></span>
       </div>
+      <div class="bulk-bar" id="bulkBar">
+        <span id="bulkCount">0 selected</span>
+        <button class="btn btn-ghost btn-sm" onclick="bulkMarkGraduated()">Mark Graduated Today</button>
+        <button class="btn btn-ghost btn-sm" onclick="bulkArchive(true)">Archive Selected</button>
+        <button class="btn btn-ghost btn-sm" onclick="bulkArchive(false)">Restore Selected</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
+      </div>
       <div class="table-wrap">
-        <table>
+        <table id="recordsTable">
           <thead>
             <tr>
+              <th style="width:32px;"><input type="checkbox" id="selectAllBox" onchange="toggleSelectAll(this)"></th>
               <th style="width:44px;">#</th>
               <th class="sortable" onclick="sortTable(1)">ID <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="sortTable(2)">Full Name <span class="sort-icon">↕</span></th>
@@ -547,14 +604,16 @@
               <th class="sortable" onclick="sortTable(9)">Graduation <span class="sort-icon">↕</span></th>
               <th>Weeks</th>
               <th>Memo</th>
-              <th style="width:48px;"></th>
+              <th>Last Edited</th>
+              <th style="width:100px;"></th>
             </tr>
           </thead>
           <tbody id="recordsBody">
-            <tr class="loading-row"><td colspan="13"><span class="spinner"></span> Loading records…</td></tr>
+            <tr class="loading-row"><td colspan="15"><span class="spinner"></span> Loading records…</td></tr>
           </tbody>
         </table>
       </div>
+      <div class="pagination-bar" id="paginationBar"></div>
     </div>
   </div>
 </div>
@@ -589,12 +648,37 @@ function showLoginMsg(text, type) {
   el.className = 'login-msg show ' + (type || 'info');
 }
 
-function handleCredentialResponse(response) {
+async function handleCredentialResponse(response) {
   currentIdToken = response.credential;
   // Decode the JWT payload (client-side, display purposes only — the backend
   // independently re-verifies the token signature, audience, and whitelist).
   let claims = {};
   try { claims = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e) {}
+
+  // Ask the backend to verify FIRST — do not reveal the app until we know
+  // for certain the account is on the whitelist, so unauthorized users never
+  // see even a flash of the interface.
+  showLoginMsg('Verifying access…', 'info');
+  document.getElementById('gsiButtonWrap').style.display = 'none';
+
+  let verified = false;
+  try {
+    const res  = await fetch(withAuth(GAS_URL + '?action=get'));
+    const data = await res.json();
+    if (data.status === 'ok') {
+      verified = true;
+      allRecords = data.records || [];
+    } else if (data.code === 401) {
+      handleAuthError();
+    } else {
+      showLoginMsg('Connection error. Please try again.', 'error');
+    }
+  } catch (e) {
+    showLoginMsg('Connection error. Please try again.', 'error');
+  }
+
+  document.getElementById('gsiButtonWrap').style.display = '';
+  if (!verified) return;
 
   document.getElementById('userEmail').textContent = claims.email || '';
   document.getElementById('userAvatar').src = claims.picture || '';
@@ -603,7 +687,7 @@ function handleCredentialResponse(response) {
   document.getElementById('appShell').classList.add('ready');
   showLoginMsg('', '');
 
-  loadRecords();
+  loadRecords(); // re-runs the full render pipeline (sorting, filters, dropdowns, etc.)
   loadSchools();
 }
 
@@ -1361,12 +1445,17 @@ async function runImport() {
 let allRecords = [];
 let currentFilteredRecords = [];
 let sortCol = -1, sortAsc = true;
+let selectedRows = new Set();
+let currentPage = 1;
+const PAGE_SIZE = 50;
 
 async function loadRecords() {
   document.getElementById('recordsBody').innerHTML =
-    '<tr class="loading-row"><td colspan="13"><span class="spinner"></span> Loading…</td></tr>';
+    '<tr class="loading-row"><td colspan="15"><span class="spinner"></span> Loading…</td></tr>';
   try {
-    const res  = await fetch(withAuth(GAS_URL + '?action=get'));
+    const archivedMode = document.getElementById('searchArchived').value; // active | all | archived
+    const includeArchived = archivedMode !== 'active';
+    const res  = await fetch(withAuth(GAS_URL + '?action=get&includeArchived=' + includeArchived));
     const data = await res.json();
     if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
     allRecords = data.records || [];
@@ -1383,12 +1472,41 @@ async function loadRecords() {
     saveSchoolsBatch(allRecords.filter(r => r.isCamp && r.school).map(r => r.school));
     populateSchoolDatalist();
     populateSchoolFilter();
+    currentPage = 1;
     filterTable();
-    document.getElementById('totalBadge').textContent = allRecords.length + ' records';
+    renderStats();
+    document.getElementById('totalBadge').textContent = allRecords.filter(r => !r.archived).length + ' records';
   } catch(e) {
     document.getElementById('recordsBody').innerHTML =
-      '<tr><td colspan="13" style="text-align:center;padding:48px;color:var(--danger);">Failed to load records.</td></tr>';
+      '<tr><td colspan="15" style="text-align:center;padding:48px;color:var(--danger);">Failed to load records.</td></tr>';
   }
+}
+
+// ── DASHBOARD STATS ───────────────────────────────────────────────────────────
+function renderStats() {
+  const box = document.getElementById('statsBar');
+  const active = allRecords.filter(r => !r.archived);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in30 = new Date(today.getTime() + 30*24*60*60*1000);
+
+  const upcomingGrad = active.filter(r => {
+    if (!r.dateGrad) return false;
+    const d = new Date(r.dateGrad.replace(/^(\d+)(st|nd|rd|th) of (.+)$/, '$3 $1'));
+    return !isNaN(d) && d >= today && d <= in30;
+  }).length;
+
+  const schoolCounts = {};
+  active.forEach(r => { if (r.isCamp && r.school) schoolCounts[r.school] = (schoolCounts[r.school]||0) + 1; });
+  const topSchool = Object.entries(schoolCounts).sort((a,b) => b[1]-a[1])[0];
+  const archivedCount = allRecords.filter(r => r.archived).length;
+
+  box.innerHTML = `
+    <div class="stat-box"><div class="stat-num">${active.length}</div><div class="stat-label">Active Students</div></div>
+    <div class="stat-box"><div class="stat-num">${active.filter(r=>r.isCamp).length}</div><div class="stat-label">Camp Students</div></div>
+    <div class="stat-box"><div class="stat-num">${upcomingGrad}</div><div class="stat-label">Graduating (30 days)</div></div>
+    <div class="stat-box"><div class="stat-num">${topSchool ? topSchool[1] : 0}</div><div class="stat-label">${topSchool ? topSchool[0] : 'Top School'}</div></div>
+    <div class="stat-box"><div class="stat-num">${archivedCount}</div><div class="stat-label">Archived</div></div>
+  `;
 }
 
 function courseBadge(c) {
@@ -1408,7 +1526,8 @@ function renderTable(rows) {
   const tbody = document.getElementById('recordsBody');
   document.getElementById('recordCount').textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}`;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="13"><div class="empty-state"><div class="icon">📋</div><p>No records found.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15"><div class="empty-state"><div class="icon">📋</div><p>No records found.</p></div></td></tr>';
+    renderPagination(0);
     return;
   }
 
@@ -1421,7 +1540,12 @@ function renderTable(rows) {
     return a.isCamp ? 1 : -1; // regular first
   });
 
-  tbody.innerHTML = sorted.map((r, i) => {
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = sorted.slice(start, start + PAGE_SIZE);
+
+  tbody.innerHTML = pageRows.map((r, i) => {
     const endedCell = r.dateEnded ? r.dateEnded : `<span class="td-tentative">Tentative</span>`;
     const gradCell  = r.dateGrad  ? r.dateGrad  : `<span class="td-tentative">Tentative</span>`;
     const weeks     = (r.weeks !== '' && r.weeks != null) ? r.weeks : calcWeeks(r.dateStarted, r.dateEnded);
@@ -1429,39 +1553,159 @@ function renderTable(rows) {
     const campBadge = r.isCamp
       ? `<span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#064E3B;color:#D1FAE5;margin-left:6px;">CAMP</span>`
       : '';
-    return `<tr onclick="openEditByRow(${r.rowNo})" style="background:${bgColor};">
-      <td class="td-muted" style="text-align:center;">${i + 1}</td>
-      <td class="td-id">${r.studentId || '—'}</td>
-      <td class="td-name">${r.fullName || '—'}${campBadge}</td>
-      <td>${campusBadge(r.campus)}</td>
-      <td class="td-muted">${r.country || '—'}</td>
-      <td>${courseBadge(r.course)}</td>
-      <td class="td-muted">${r.type || '—'}</td>
-      <td class="td-muted">${r.dateStarted || '—'}</td>
-      <td>${endedCell}</td>
-      <td>${gradCell}</td>
-      <td class="td-muted">${weeks || '—'}</td>
-      <td class="td-muted">${r.isCamp && r.school ? `<span style="font-size:11px;font-weight:600;">${r.school}</span>` : (r.memo || '—')}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 10px;">Edit</button></td>
+    const checked   = selectedRows.has(r.rowNo) ? 'checked' : '';
+    const rowClass  = (selectedRows.has(r.rowNo) ? 'row-selected ' : '') + (r.archived ? 'archived-row' : '');
+    const lastEdit  = r.lastEditedBy ? `<span style="font-size:11px;">${r.lastEditedBy}${r.lastEditedAt ? '<br><span class="td-muted" style="font-size:10px;">'+r.lastEditedAt+'</span>' : ''}</span>` : '<span class="td-muted">—</span>';
+    const archiveBtn = r.archived
+      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, false)" style="padding:0 8px;">Restore</button>`
+      : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, true)" style="padding:0 8px;">Archive</button>`;
+    return `<tr onclick="openEditByRow(${r.rowNo})" style="background:${bgColor};" class="${rowClass}">
+      <td onclick="event.stopPropagation();" data-label=""><input type="checkbox" class="row-checkbox" ${checked} onchange="toggleRowSelect(${r.rowNo}, this)"></td>
+      <td class="td-muted" style="text-align:center;" data-label="">${start + i + 1}</td>
+      <td class="td-id" data-label="ID">${r.studentId || '—'}</td>
+      <td class="td-name" data-label="Full Name">${r.fullName || '—'}${campBadge}</td>
+      <td data-label="Campus">${campusBadge(r.campus)}</td>
+      <td class="td-muted" data-label="Country">${r.country || '—'}</td>
+      <td data-label="Course">${courseBadge(r.course)}</td>
+      <td class="td-muted" data-label="Type">${r.type || '—'}</td>
+      <td class="td-muted" data-label="Date Started">${r.dateStarted || '—'}</td>
+      <td data-label="Date Ended">${endedCell}</td>
+      <td data-label="Graduation">${gradCell}</td>
+      <td class="td-muted" data-label="Weeks">${weeks || '—'}</td>
+      <td class="td-muted" data-label="Memo">${r.isCamp && r.school ? `<span style="font-size:11px;font-weight:600;">${r.school}</span>` : (r.memo || '—')}</td>
+      <td data-label="Last Edited">${lastEdit}</td>
+      <td onclick="event.stopPropagation();" data-label="" style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 8px;">Edit</button>
+        ${archiveBtn}
+      </td>
     </tr>`;
   }).join('');
+
+  renderPagination(sorted.length);
+  updateSelectAllState(pageRows);
+}
+
+function renderPagination(totalRows) {
+  const bar = document.getElementById('paginationBar');
+  const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
+  if (totalRows <= PAGE_SIZE) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `
+    <button onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>← Prev</button>
+    <span>Page ${currentPage} of ${totalPages} (${totalRows} records)</span>
+    <button onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Next →</button>
+  `;
+}
+
+function goToPage(p) {
+  currentPage = p;
+  renderTable(currentFilteredRecords);
 }
 
 function filterTable() {
-  const q       = document.getElementById('searchQuery').value.toLowerCase();
-  const country = document.getElementById('searchCountry').value.toLowerCase();
-  const course  = document.getElementById('searchCourse').value;
-  const school  = document.getElementById('searchSchool').value;
-  const campus  = document.getElementById('searchCampus').value;
+  const q         = document.getElementById('searchQuery').value.toLowerCase();
+  const country   = document.getElementById('searchCountry').value.toLowerCase();
+  const course    = document.getElementById('searchCourse').value;
+  const school    = document.getElementById('searchSchool').value;
+  const campus    = document.getElementById('searchCampus').value;
+  const archMode  = document.getElementById('searchArchived').value; // active | all | archived
   const filtered = allRecords.filter(r =>
     (!q       || (r.fullName||'').toLowerCase().includes(q) || (r.studentId||'').toLowerCase().includes(q)) &&
     (!country || (r.country||'').toLowerCase().includes(country)) &&
     (!course  || r.course === course) &&
     (!school  || (school === '__none__' ? !r.isCamp || !r.school : (r.isCamp && r.school === school))) &&
-    (!campus  || r.campus === campus)
+    (!campus  || r.campus === campus) &&
+    (archMode === 'all' || (archMode === 'archived' ? r.archived : !r.archived))
   );
   currentFilteredRecords = filtered;
+  currentPage = 1;
   renderTable(filtered);
+}
+
+// ── ROW SELECTION / BULK ACTIONS ──────────────────────────────────────────────
+function toggleRowSelect(rowNo, el) {
+  if (el.checked) selectedRows.add(rowNo); else selectedRows.delete(rowNo);
+  updateBulkBar();
+  document.querySelector(`tr[onclick="openEditByRow(${rowNo})"]`)?.classList.toggle('row-selected', el.checked);
+}
+
+function toggleSelectAll(el) {
+  const boxes = document.querySelectorAll('#recordsBody .row-checkbox');
+  boxes.forEach(box => {
+    box.checked = el.checked;
+    box.dispatchEvent(new Event('change'));
+  });
+}
+
+function updateSelectAllState(pageRows) {
+  const allBox = document.getElementById('selectAllBox');
+  if (!allBox) return;
+  const allChecked = pageRows.length > 0 && pageRows.every(r => selectedRows.has(r.rowNo));
+  allBox.checked = allChecked;
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const count = selectedRows.size;
+  document.getElementById('bulkCount').textContent = count + ' selected';
+  bar.classList.toggle('show', count > 0);
+}
+
+function clearSelection() {
+  selectedRows.clear();
+  updateBulkBar();
+  renderTable(currentFilteredRecords);
+}
+
+async function archiveSingle(rowNo, archived) {
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'archive', rowNo, archived })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      toast(archived ? 'Record archived.' : 'Record restored.', 'success');
+      loadRecords();
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch(e) { toast('Connection error.', 'error'); }
+}
+
+async function bulkArchive(archived) {
+  if (!selectedRows.size) return;
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'bulkUpdate', rowNos: [...selectedRows], updates: { archived } })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      toast((archived ? 'Archived ' : 'Restored ') + data.updated + ' record(s).', 'success');
+      clearSelection();
+      loadRecords();
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch(e) { toast('Connection error.', 'error'); }
+}
+
+async function bulkMarkGraduated() {
+  if (!selectedRows.size) return;
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'bulkUpdate', rowNos: [...selectedRows], updates: { dateGrad: today } })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      toast('Marked ' + data.updated + ' record(s) as graduated today.', 'success');
+      clearSelection();
+      loadRecords();
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch(e) { toast('Connection error.', 'error'); }
+}
+
+// ── PRINT ──────────────────────────────────────────────────────────────────
+function printRecords() {
+  window.print();
 }
 
 // Rebuilds the School filter dropdown from schools actually present in the
@@ -1516,7 +1760,7 @@ function exportXLSX(onlyFiltered) {
     toast(onlyFiltered ? 'No matching records to export.' : 'No records to export.', 'error');
     return;
   }
-  const headers = ['Student ID', 'Full Name', 'Campus', 'Country of Origin', 'Course', 'Type', 'Date Started', 'Date Ended', 'Date of Graduation', 'Birth Day', 'Sex', 'Week', 'Agency', 'Arrival Date', 'Flight No.', 'Arrival Time', 'Memo', 'Weeks', 'Is Camp', 'School'];
+  const headers = ['Student ID', 'Full Name', 'Campus', 'Country of Origin', 'Course', 'Type', 'Date Started', 'Date Ended', 'Date of Graduation', 'Birth Day', 'Sex', 'Week', 'Agency', 'Arrival Date', 'Flight No.', 'Arrival Time', 'Memo', 'Weeks', 'Is Camp', 'School', 'Last Edited By', 'Last Edited At', 'Archived'];
   const rows = source.map(r => [
     { t: 's', v: r.studentId   || '' },
     { t: 's', v: r.fullName    || '' },
@@ -1538,13 +1782,17 @@ function exportXLSX(onlyFiltered) {
     { t: 's', v: (r.weeks !== '' && r.weeks != null) ? r.weeks : calcWeeks(r.dateStarted, r.dateEnded) },
     { t: 's', v: r.isCamp ? 'Yes' : 'No' },
     { t: 's', v: r.school || '' },
+    { t: 's', v: r.lastEditedBy || '' },
+    { t: 's', v: r.lastEditedAt || '' },
+    { t: 's', v: r.archived ? 'Yes' : 'No' },
   ]);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws['!cols'] = [
     { wch: 14 }, { wch: 26 }, { wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 16 },
     { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 18 },
     { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 18 },
-    { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 20 }
+    { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 20 },
+    { wch: 22 }, { wch: 18 }, { wch: 10 }
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Records');
