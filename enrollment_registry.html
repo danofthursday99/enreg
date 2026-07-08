@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enrollment Registry</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #F0F2F5;
+    --surface:   #FFFFFF;
+    --border:    #E2E5EA;
+    --text:      #1A1D23;
+    --muted:     #6B7280;
+    --accent:    #2563EB;
+    --accent-dk: #1D4ED8;
+    --accent-lt: #EFF6FF;
+    --success:   #059669;
+    --success-lt:#ECFDF5;
+    --danger:    #DC2626;
+    --danger-lt: #FEF2F2;
+    --warn:      #D97706;
+    --warn-lt:   #FFFBEB;
+    --radius:    10px;
+    --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+  .site-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 15px; font-weight: 600; font-family: 'DM Serif Display', serif; }
+  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .stat-badge { background: var(--accent-lt); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .page { max-width: 1280px; margin: 0 auto; padding: 28px 24px 60px; }
+  .tabs { display: flex; gap: 2px; margin-bottom: 24px; background: var(--border); padding: 3px; border-radius: calc(var(--radius) + 2px); width: fit-content; }
+  .tab { padding: 8px 20px; border: none; background: transparent; border-radius: var(--radius); font-family: inherit; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .18s; }
+  .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-family: 'DM Serif Display', serif; font-size: 18px; font-weight: 400; letter-spacing: -0.3px; }
+  .card-body { padding: 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .form-grid .span-2 { grid-column: span 2; }
+  .form-grid .span-3 { grid-column: span 3; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .field-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .field input, .field select { height: 40px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; color: var(--text); background: var(--surface); transition: border-color .15s, box-shadow .15s; outline: none; -webkit-appearance: none; appearance: none; }
+  .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+  .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .field input.error { border-color: var(--danger); }
+  .form-footer { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 0 20px; height: 40px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dk); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-success { background: var(--success-lt); color: var(--success); border: 1.5px solid #A7F3D0; }
+  .btn-success:hover { background: #D1FAE5; }
+  .btn-sm { height: 32px; padding: 0 14px; font-size: 12px; }
+  .toast-wrap { position: fixed; top: 72px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg); pointer-events: all; animation: slideIn .2s ease; max-width: 320px; }
+  .toast.success { background: var(--success-lt); color: var(--success); border: 1px solid #A7F3D0; }
+  .toast.error   { background: var(--danger-lt);  color: var(--danger);  border: 1px solid #FECACA; }
+  .toast.info    { background: var(--accent-lt);  color: var(--accent);  border: 1px solid #BFDBFE; }
+  @keyframes slideIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: none; } }
+  .search-bar { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid var(--border); background: #FAFBFC; border-radius: var(--radius) var(--radius) 0 0; align-items: center; }
+  .search-bar input, .search-bar select { height: 36px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 7px; font-family: inherit; font-size: 13px; color: var(--text); background: var(--surface); outline: none; -webkit-appearance: none; appearance: none; transition: border-color .15s; }
+  .search-bar input { min-width: 180px; flex: 1; }
+  .search-bar select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; min-width: 160px; }
+  .search-bar input:focus, .search-bar select:focus { border-color: var(--accent); }
+  .record-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); border-bottom: 1.5px solid var(--border); white-space: nowrap; user-select: none; }
+  thead th.sortable { cursor: pointer; }
+  thead th.sortable:hover { color: var(--accent); }
+  thead th.sorted { color: var(--accent); }
+  .sort-icon { margin-left: 4px; opacity: .4; font-size: 10px; }
+  thead th.sorted .sort-icon { opacity: 1; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; cursor: pointer; }
+  tbody tr:hover { background: #F5F7FF; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 11px 14px; vertical-align: middle; }
+  .td-id { font-family: monospace; font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .td-name { font-weight: 500; }
+  .td-muted { color: var(--muted); font-size: 12px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-esl   { background: #EFF6FF; color: #2563EB; }
+  .badge-toeic { background: #F0FDF4; color: #16A34A; }
+  .badge-ielts { background: #FFF7ED; color: #C2410C; }
+  .badge-toefl { background: #FDF4FF; color: #9333EA; }
+  .badge-campus-mabolo { background: #ECFEFF; color: #0E7490; }
+  .badge-campus-uspf   { background: #FEF9C3; color: #A16207; }
+  .badge-campus-iau    { background: #F3E8FF; color: #7E22CE; }
+  .td-tentative { color: var(--warn); font-style: italic; font-size: 12px; }
+  .empty-state { text-align: center; padding: 64px 24px; color: var(--muted); }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+  .loading-row td { text-align: center; padding: 48px; color: var(--muted); }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-lg); width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; transform: translateY(16px); transition: transform .2s; }
+  .modal-overlay.open .modal { transform: none; }
+  .modal-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 18px; font-weight: 400; }
+  .modal-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; line-height: 1; padding: 4px; border-radius: 6px; }
+  .modal-close:hover { background: var(--bg); color: var(--text); }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .modal-footer .ml-auto { margin-left: auto; }
+  @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } .form-grid .span-3 { grid-column: span 2; } .site-header { padding: 0 16px; } .page { padding: 16px 12px 40px; } }
+  @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .form-grid .span-2, .form-grid .span-3 { grid-column: span 1; } }
+
+  /* ── LOGIN OVERLAY ────────────────────────────────────────────────── */
+  .login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-overlay.hidden { display: none; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); width: 100%; max-width: 380px; padding: 40px 32px; text-align: center; }
+  .login-logo-mark { width: 48px; height: 48px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: 600; font-family: 'DM Serif Display', serif; margin: 0 auto 18px; }
+  .login-title { font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; margin-bottom: 6px; }
+  .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .login-btn-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+  .login-msg { font-size: 12.5px; margin-top: 14px; padding: 10px 14px; border-radius: 8px; display: none; }
+  .login-msg.show { display: block; }
+  .login-msg.error { background: var(--danger-lt); color: var(--danger); border: 1px solid #FECACA; }
+  .login-msg.info  { background: var(--accent-lt); color: var(--accent); border: 1px solid #BFDBFE; }
+  .app-shell { display: none; }
+  .app-shell.ready { display: block; }
+  .user-chip { display: flex; align-items: center; gap: 8px; }
+  .user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
+  .user-email { font-size: 12px; color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .logout-btn { background: none; border: 1.5px solid var(--border); color: var(--muted); border-radius: 7px; height: 30px; padding: 0 12px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo-mark">E</div>
+    <div class="login-title">Enrollment Registry</div>
+    <div class="login-sub">Sign in with your authorized Google account to continue.</div>
+    <div class="login-btn-wrap" id="gsiButtonWrap"></div>
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div class="app-shell" id="appShell">
+
+<header class="site-header">
+  <div class="logo">
+    <div class="logo-mark">E</div>
+    <div>
+      <div class="logo-text">Enrollment Registry</div>
+      <div class="logo-sub">Student Records Management</div>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <span class="stat-badge" id="totalBadge">— records</span>
+    <div class="user-chip">
+      <img class="user-avatar" id="userAvatar" src="" alt="">
+      <span class="user-email" id="userEmail"></span>
+      <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Edit Record</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- Student Type + School — TOP -->
+        <div class="field">
+          <label>Student Type</label>
+          <div style="display:flex;align-items:center;gap:0;height:40px;">
+            <button type="button" id="m_campToggle" onclick="toggleModalSchoolField()"
+              style="display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:20px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;">
+              <span id="m_campToggleIcon" style="font-size:15px;">⚪</span>
+              <span id="m_campToggleLabel">Regular</span>
+            </button>
+            <input type="hidden" id="m_isCamp" value="false">
+          </div>
+        </div>
+        <div class="field">
+          <label>Campus</label>
+          <select id="m_campus">
+            <option value="">— Select campus —</option>
+            <option>CWA-Mabolo</option>
+            <option>CWA-USPF</option>
+            <option>CWA-IAU</option>
+          </select>
+        </div>
+        <div class="field span-2" id="m_schoolFieldWrap" style="display:none;">
+          <label>School <span style="color:var(--warn);font-size:10px;font-style:italic;">camp only</span></label>
+          <input type="text" id="m_school" list="schoolList" placeholder="Type to search school — dates auto-fill if known…" autocomplete="off" oninput="debouncedSchoolFill('m_')">
+          <span class="field-hint" id="m_schoolDateHint"></span>
+        </div>
+        <!-- Row: ID + Name -->
+        <div class="field">
+          <label>Student ID</label>
+          <input type="text" id="m_id" placeholder="e.g. CU-J26122" style="font-family:monospace; font-weight:600; color:var(--accent);">
+        </div>
+        <div class="field span-2">
+          <label>Full Name</label>
+          <input type="text" id="m_fullName">
+        </div>
+        <!-- Row: Country + Course + Type -->
+        <div class="field">
+          <label>Country of Origin</label>
+          <input type="text" id="m_country" list="countryList" placeholder="Type to search…" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Course</label>
+          <select id="m_course">
+            <option value="">— Select —</option>
+            <option>ESL</option>
+            <option>TOEIC</option>
+            <option>IELTS</option>
+            <option>TOEFL</option>
+            <option>N/A</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <select id="m_type">
+            <option value="">— Select —</option>
+            <option>Standard</option>
+            <option>Intensive</option>
+            <option>Super Intensive</option>
+            <option>3 MTM</option>
+            <option>N/A</option>
+          </select>
+        </div>
+        <!-- Row: Dates -->
+        <div class="field">
+          <label>Date Started</label>
+          <input type="date" id="m_dateStarted">
+        </div>
+        <div class="field">
+          <label>Date Ended <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+          <input type="date" id="m_dateEnded">
+        </div>
+        <div class="field">
+          <label>Date of Graduation <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+          <input type="date" id="m_dateGrad">
+        </div>
+        <!-- Row: Birth Day + Sex + Memo -->
+        <div class="field">
+          <label>Birth Day <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+          <input type="date" id="m_birthDay">
+        </div>
+        <div class="field">
+          <label>Sex <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+          <select id="m_sex">
+            <option value="">—</option>
+            <option value="M">M</option>
+            <option value="F">F</option>
+          </select>
+        </div>
+        <div class="field span-3">
+          <label>Memo <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+          <input type="text" id="m_memo">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <div class="ml-auto" style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" id="modalSaveBtn" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('add')">Add Student</button>
+    <button class="tab" onclick="switchTab('import')">Bulk Import</button>
+    <button class="tab" onclick="switchTab('records')">Records</button>
+  </div>
+
+  <!-- TAB: ADD -->
+  <div class="tab-panel active" id="tab-add">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">New Enrollment</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <!-- Row 1: Student Type + School (top, prominent) -->
+          <div class="field">
+            <label>Student Type</label>
+            <div style="display:flex;align-items:center;gap:0;height:40px;">
+              <button type="button" id="campToggle" onclick="toggleSchoolField()"
+                style="display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:20px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;">
+                <span id="campToggleIcon" style="font-size:15px;">⚪</span>
+                <span id="campToggleLabel">Regular</span>
+              </button>
+              <input type="hidden" id="isCamp" value="false">
+            </div>
+            <span class="field-hint">Click to toggle Camp / Regular</span>
+          </div>
+          <div class="field">
+            <label>Campus</label>
+            <select id="campus">
+              <option value="">— Select campus —</option>
+              <option>CWA-Mabolo</option>
+              <option>CWA-USPF</option>
+              <option>CWA-IAU</option>
+            </select>
+          </div>
+          <div class="field span-2" id="schoolFieldWrap" style="display:none;">
+            <label>School <span style="color:var(--warn);font-size:10px;font-style:italic;">camp only</span></label>
+            <input type="text" id="school" list="schoolList" placeholder="Type school name — dates auto-fill if known…" autocomplete="off" oninput="debouncedSchoolFill('')">
+            <datalist id="schoolList"></datalist>
+            <span class="field-hint" id="schoolDateHint"></span>
+          </div>
+
+          <!-- Row 2: ID + Name -->
+          <div class="field">
+            <label>Student ID <span style="font-size:10px;font-weight:400;color:var(--muted);font-style:italic;">optional</span></label>
+            <input type="text" id="studentId" placeholder="Auto-numbered — optional" style="font-family:monospace;font-weight:600;color:var(--accent);">
+            <span class="field-hint">Auto-filled — editable, or clear to leave blank</span>
+          </div>
+          <div class="field span-2">
+            <label>Full Name</label>
+            <input type="text" id="fullName" placeholder="e.g. Kim Ji-woo">
+          </div>
+
+          <!-- Row 3: Country + Course -->
+          <div class="field">
+            <label>Country of Origin</label>
+            <input type="text" id="country" list="countryList" placeholder="Type to search…" autocomplete="off">
+            <datalist id="countryList"></datalist>
+          </div>
+          <div class="field">
+            <label>Course</label>
+            <select id="course" onchange="toggleTypeField()">
+              <option value="">— Select course —</option>
+
+              <option>ESL</option>
+              <option>TOEIC</option>
+              <option>IELTS</option>
+              <option>TOEFL</option>
+              <option>N/A</option>
+            </select>
+          </div>
+
+          <!-- Row 4: Type + Dates -->
+          <div class="field">
+            <label>Type</label>
+            <select id="type">
+              <option value="">— Select type —</option>
+              <option>Standard</option>
+              <option>Intensive</option>
+              <option>Super Intensive</option>
+              <option>3 MTM</option>
+              <option>N/A</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Date Started</label>
+            <input type="date" id="dateStarted">
+          </div>
+          <div class="field">
+            <label>Date Ended <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+            <input type="date" id="dateEnded" oninput="syncGrad()">
+          </div>
+
+          <!-- Row 5: Graduation + Birth Day + Sex + Memo -->
+          <div class="field">
+            <label>Date of Graduation <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+            <input type="date" id="dateGrad">
+            <span class="field-hint">Auto-filled from Date Ended</span>
+          </div>
+          <div class="field">
+            <label>Birth Day <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+            <input type="date" id="birthDay">
+          </div>
+          <div class="field">
+            <label>Sex <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+            <select id="sex">
+              <option value="">—</option>
+              <option value="M">M</option>
+              <option value="F">F</option>
+            </select>
+          </div>
+          <div class="field span-3">
+            <label>Memo <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+            <input type="text" id="memo" placeholder="e.g. Intensive — DX">
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            Save Record
+          </button>
+          <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: BULK IMPORT -->
+  <div class="tab-panel" id="tab-import">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Bulk Import</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+          Paste rows copied directly from the source Google Sheet (tab-separated), in this column order:<br>
+          <code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;">
+          Name&nbsp;|&nbsp;Birthday&nbsp;|&nbsp;Sex&nbsp;|&nbsp;Nationality&nbsp;|&nbsp;Week&nbsp;|&nbsp;Starting Day&nbsp;|&nbsp;Graduate Day&nbsp;|&nbsp;Agency&nbsp;|&nbsp;Course&nbsp;|&nbsp;Type&nbsp;|&nbsp;Arrival Date&nbsp;|&nbsp;Flight No.&nbsp;|&nbsp;Arrival Time&nbsp;|&nbsp;Memo
+          </code><br>
+          Rows where Course is <strong>NO LESSON</strong> are skipped automatically. The Type (Standard/Intensive/Super Intensive/3&nbsp;MTM) is folded into the Memo field.
+        </p>
+        <div class="field" style="max-width:280px;margin-bottom:14px;">
+          <label>Campus <span style="color:var(--warn);font-size:10px;font-style:italic;">applies to all rows below</span></label>
+          <select id="importCampus">
+            <option value="">— Select campus —</option>
+            <option>CWA-Mabolo</option>
+            <option>CWA-USPF</option>
+            <option>CWA-IAU</option>
+          </select>
+        </div>
+        <textarea id="importText" rows="10" style="width:100%;font-family:monospace;font-size:12px;padding:12px;border:1.5px solid var(--border);border-radius:8px;resize:vertical;" placeholder="Paste tab-separated rows here…"></textarea>
+        <div id="importPreviewWrap" style="margin-top:18px;display:none;">
+          <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Preview</div>
+          <div class="table-wrap" style="border:1px solid var(--border);border-radius:8px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th><th>Country</th><th>Course</th><th>Type</th><th>Started</th><th>Graduated</th><th>Memo</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="previewImport()">Preview</button>
+          <button class="btn btn-primary" id="importBtn" onclick="runImport()" disabled>Import All</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('importText').value='';document.getElementById('importPreviewWrap').style.display='none';document.getElementById('importBtn').disabled=true;">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: RECORDS -->
+  <div class="tab-panel" id="tab-records">
+    <div class="card">
+      <div class="search-bar">
+        <input type="text" id="searchQuery" placeholder="Search by name or ID…" oninput="filterTable()">
+        <input type="text" id="searchCountry" placeholder="Country…" oninput="filterTable()">
+        <select id="searchCourse" onchange="filterTable()">
+          <option value="">All courses</option>
+          <option>ESL</option>
+          <option>TOEIC</option>
+          <option>IELTS</option>
+          <option>TOEFL</option>
+          <option>N/A</option>
+        </select>
+        <select id="searchSchool" onchange="filterTable()">
+          <option value="">All schools</option>
+          <option value="__none__">No school / regular</option>
+        </select>
+        <select id="searchCampus" onchange="filterTable()">
+          <option value="">All campuses</option>
+          <option>CWA-Mabolo</option>
+          <option>CWA-USPF</option>
+          <option>CWA-IAU</option>
+        </select>
+        <select id="sortDropdown" onchange="sortFromDropdown()">
+          <option value="">Sort by…</option>
+          <optgroup label="ID">
+            <option value="1_asc">ID (A–Z)</option>
+            <option value="1_desc">ID (Z–A)</option>
+          </optgroup>
+          <optgroup label="Full Name">
+            <option value="2_asc">Name (A–Z)</option>
+            <option value="2_desc">Name (Z–A)</option>
+          </optgroup>
+          <optgroup label="Campus">
+            <option value="3_asc">Campus (A–Z)</option>
+            <option value="3_desc">Campus (Z–A)</option>
+          </optgroup>
+          <optgroup label="Country">
+            <option value="4_asc">Country (A–Z)</option>
+            <option value="4_desc">Country (Z–A)</option>
+          </optgroup>
+          <optgroup label="Course">
+            <option value="5_asc">Course (A–Z)</option>
+            <option value="5_desc">Course (Z–A)</option>
+          </optgroup>
+          <optgroup label="Type">
+            <option value="6_asc">Type (A–Z)</option>
+            <option value="6_desc">Type (Z–A)</option>
+          </optgroup>
+          <optgroup label="Date Started">
+            <option value="7_asc">Date Started (Oldest first)</option>
+            <option value="7_desc">Date Started (Newest first)</option>
+          </optgroup>
+          <optgroup label="Date Ended">
+            <option value="8_asc">Date Ended (Oldest first)</option>
+            <option value="8_desc">Date Ended (Newest first)</option>
+          </optgroup>
+          <optgroup label="Graduation">
+            <option value="9_asc">Graduation (Oldest first)</option>
+            <option value="9_desc">Graduation (Newest first)</option>
+          </optgroup>
+        </select>
+        <button class="btn btn-ghost" style="height:36px;padding:0 14px;font-size:12px;" onclick="loadRecords()">↻ Refresh</button>
+        <button class="btn btn-success" style="height:36px;padding:0 14px;font-size:12px;" onclick="exportXLSX(false)" title="Export every record, ignoring current search/sort">⬇ Export All</button>
+        <button class="btn btn-success" style="height:36px;padding:0 14px;font-size:12px;" onclick="exportXLSX(true)" title="Export only what's currently shown (matches your search + sort)">⬇ Export Filtered</button>
+        <span class="record-count" id="recordCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:44px;">#</th>
+              <th class="sortable" onclick="sortTable(1)">ID <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(2)">Full Name <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(3)">Campus <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(4)">Country <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(5)">Course <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(6)">Type <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(7)">Date Started <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(8)">Date Ended <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="sortTable(9)">Graduation <span class="sort-icon">↕</span></th>
+              <th>Weeks</th>
+              <th>Memo</th>
+              <th style="width:48px;"></th>
+            </tr>
+          </thead>
+          <tbody id="recordsBody">
+            <tr class="loading-row"><td colspan="13"><span class="spinner"></span> Loading records…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzC_zVO2ZBO7INf3_o_qHnlan6WpBZG-JZ43ypmQ-yE-UqdsrZ5bDn6LUBav9crI7M-/exec';
+
+// ── AUTH (Google Sign-In) ──────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = '432071525789-eo7tb1b1mlal146lol24nd6il1ccpqjk.apps.googleusercontent.com';
+let currentIdToken = null; // set after successful Google Sign-In; sent with every backend request
+
+// Appends idToken as a query param to a GET url
+function withAuth(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  return url + sep + 'idToken=' + encodeURIComponent(currentIdToken || '');
+}
+// Adds idToken into a POST payload object
+function withAuthPayload(payload) {
+  return Object.assign({}, payload, { idToken: currentIdToken });
+}
+// Central handler for backend auth failures — kicks the user back to the login screen
+function handleAuthError() {
+  currentIdToken = null;
+  document.getElementById('appShell').classList.remove('ready');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  showLoginMsg('Your session expired or is not authorized. Please sign in again.', 'error');
+  try { google.accounts.id.disableAutoSelect(); } catch(e) {}
+}
+function showLoginMsg(text, type) {
+  const el = document.getElementById('loginMsg');
+  el.textContent = text;
+  el.className = 'login-msg show ' + (type || 'info');
+}
+
+function handleCredentialResponse(response) {
+  currentIdToken = response.credential;
+  // Decode the JWT payload (client-side, display purposes only — the backend
+  // independently re-verifies the token signature, audience, and whitelist).
+  let claims = {};
+  try { claims = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e) {}
+
+  document.getElementById('userEmail').textContent = claims.email || '';
+  document.getElementById('userAvatar').src = claims.picture || '';
+
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('appShell').classList.add('ready');
+  showLoginMsg('', '');
+
+  loadRecords();
+  loadSchools();
+}
+
+function handleLogout() {
+  currentIdToken = null;
+  try { google.accounts.id.disableAutoSelect(); } catch(e) {}
+  document.getElementById('appShell').classList.remove('ready');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  showLoginMsg('', '');
+}
+
+window.addEventListener('load', () => {
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,
+    auto_select: true, // silently re-signs-in returning users (acts like "remember me")
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('gsiButtonWrap'),
+    { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' }
+  );
+  google.accounts.id.prompt(); // triggers One Tap for returning users
+});
+
+let   nextSeq   = 122;
+
+// Country → Nationality Code mapping (commonly used codes; editable after auto-fill)
+const COUNTRY_CODES = {
+  "Afghanistan":"AFG","Albania":"ALB","Algeria":"ALG","Argentina":"ARG","Armenia":"ARM",
+  "Australia":"AUS","Austria":"AUT","Azerbaijan":"AZE","Bahrain":"BRN","Bangladesh":"BAN",
+  "Belarus":"BLR","Belgium":"BEL","Bhutan":"BHU","Bolivia":"BOL","Bosnia and Herzegovina":"BIH",
+  "Brazil":"BRA","Brunei":"BRU","Bulgaria":"BUL","Cambodia":"CAM","Cameroon":"CMR",
+  "Canada":"CAN","Chile":"CHI","China":"CHN","Colombia":"COL","Costa Rica":"CRC",
+  "Croatia":"CRO","Cuba":"CUB","Cyprus":"CYP","Czech Republic":"CZE","Denmark":"DEN",
+  "Dominican Republic":"DOM","Ecuador":"ECU","Egypt":"EGY","El Salvador":"ESA","Estonia":"EST",
+  "Ethiopia":"ETH","Fiji":"FIJ","Finland":"FIN","France":"FRA","Georgia":"GEO",
+  "Germany":"GER","Ghana":"GHA","Greece":"GRE","Guatemala":"GUA","Honduras":"HON",
+  "Hong Kong":"HKG","Hungary":"HUN","Iceland":"ISL","India":"IND","Indonesia":"INA",
+  "Iran":"IRI","Iraq":"IRQ","Ireland":"IRL","Israel":"ISR","Italy":"ITA",
+  "Jamaica":"JAM","Japan":"J","Jordan":"JOR","Kazakhstan":"KAZ","Kenya":"KEN",
+  "Kuwait":"KUW","Kyrgyzstan":"KGZ","Laos":"LAO","Latvia":"LAT","Lebanon":"LIB",
+  "Libya":"LBA","Liechtenstein":"LIE","Lithuania":"LTU","Luxembourg":"LUX","Macau":"MAC",
+  "Malaysia":"MAS","Maldives":"MDV","Mali":"MLI","Malta":"MLT","Mexico":"MEX",
+  "Moldova":"MDA","Monaco":"MON","Mongolia":"MGL","Montenegro":"MNE","Morocco":"MAR",
+  "Myanmar":"MYA","Nepal":"NEP","Netherlands":"NED","New Zealand":"NZL","Nicaragua":"NCA",
+  "Nigeria":"NGR","North Korea":"PRK","North Macedonia":"MKD","Norway":"NOR","Oman":"OMA",
+  "Pakistan":"PAK","Palestine":"PLE","Panama":"PAN","Papua New Guinea":"PNG","Paraguay":"PAR",
+  "Peru":"PER","Philippines":"PHI","Poland":"POL","Portugal":"POR","Puerto Rico":"PUR",
+  "Qatar":"QAT","Romania":"ROU","Russia":"RUS","Rwanda":"RWA","Saudi Arabia":"KSA",
+  "Senegal":"SEN","Serbia":"SRB","Singapore":"SGP","Slovakia":"SVK","Slovenia":"SLO",
+  "South Africa":"RSA","South Korea":"K","Spain":"ESP","Sri Lanka":"SRI","Sudan":"SUD",
+  "Sweden":"SWE","Switzerland":"SUI","Syria":"SYR","Taiwan":"TPE","Tajikistan":"TJK",
+  "Tanzania":"TAN","Thailand":"THA","Tunisia":"TUN","Turkey":"TUR","Turkmenistan":"TKM",
+  "Uganda":"UGA","Ukraine":"UKR","United Arab Emirates":"UAE","United Kingdom":"GBR",
+  "United States":"USA","Uruguay":"URU","Uzbekistan":"UZB","Venezuela":"VEN",
+  "Vietnam":"VIE","Yemen":"YEM","Zambia":"ZAM","Zimbabwe":"ZIM"
+};
+
+// ── SCHOOL MEMORY SYSTEM ──────────────────────────────────────────────────────
+// Default schools always available as suggestions
+const DEFAULT_SCHOOLS = [
+  'Kagawa University',
+  'Hiroshima University',
+  'Yamaguchi University',
+  'Suisan University',
+  'Ehime University',
+];
+const SCHOOL_STORAGE_KEY = 'enrollmentRegistry_schools';
+
+function loadSchools() {
+  try {
+    const stored = localStorage.getItem(SCHOOL_STORAGE_KEY);
+    const custom = stored ? JSON.parse(stored) : [];
+    // Merge defaults + custom, remove duplicates, sort alphabetically
+    const merged = [...new Set([...DEFAULT_SCHOOLS, ...custom])].sort();
+    return merged;
+  } catch(e) {
+    return [...DEFAULT_SCHOOLS].sort();
+  }
+}
+
+function saveSchool(name) {
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  // Only save if it's a new school not already in defaults
+  if (DEFAULT_SCHOOLS.includes(trimmed)) return;
+  try {
+    const stored = localStorage.getItem(SCHOOL_STORAGE_KEY);
+    const custom = stored ? JSON.parse(stored) : [];
+    if (!custom.includes(trimmed)) {
+      custom.push(trimmed);
+      localStorage.setItem(SCHOOL_STORAGE_KEY, JSON.stringify(custom));
+    }
+  } catch(e) {}
+}
+
+// Same as calling saveSchool() once per name, but reads/writes localStorage
+// a single time regardless of how many records are passed in — matters when
+// loading hundreds of records at once.
+function saveSchoolsBatch(names) {
+  const uniqueNew = [...new Set(names.map(n => (n||'').trim()).filter(Boolean))]
+    .filter(n => !DEFAULT_SCHOOLS.includes(n));
+  if (!uniqueNew.length) return;
+  try {
+    const stored = localStorage.getItem(SCHOOL_STORAGE_KEY);
+    const custom = stored ? JSON.parse(stored) : [];
+    let changed = false;
+    uniqueNew.forEach(n => { if (!custom.includes(n)) { custom.push(n); changed = true; } });
+    if (changed) localStorage.setItem(SCHOOL_STORAGE_KEY, JSON.stringify(custom));
+  } catch(e) {}
+}
+
+function populateSchoolDatalist() {
+  const list = document.getElementById('schoolList');
+  list.innerHTML = '';
+  loadSchools().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    list.appendChild(opt);
+  });
+}
+
+function populateCountryDropdown() {
+  const list = document.getElementById('countryList');
+  Object.keys(COUNTRY_CODES).sort().forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    list.appendChild(opt);
+  });
+}
+
+function buildId(seq) {
+  return String(seq);
+}
+
+// Recovers a usable sequence number from any Student ID format we might
+// encounter — new plain numbers, or older "CU-<code>26<seq>" IDs (some of
+// which were corrupted by a historical bug that doubled the "26").
+function extractSeq(id) {
+  id = (id || '').toString().trim();
+  if (!id) return 0;
+  const legacy = id.match(/^CU-[A-Za-z]+(\d+)$/);
+  if (legacy) {
+    let rest = legacy[1];
+    while (rest.length > 2 && rest.startsWith('26')) rest = rest.slice(2);
+    return parseInt(rest, 10) || 0;
+  }
+  if (/^\d+$/.test(id)) return parseInt(id, 10) || 0;
+  const any = id.match(/(\d+)$/);
+  return any ? (parseInt(any[1], 10) || 0) : 0;
+}
+
+function regenerateId() {
+  document.getElementById('studentId').value = nextSeq ? buildId(nextSeq) : '';
+}
+
+function syncGrad() {
+  const ended = document.getElementById('dateEnded').value;
+  if (ended) document.getElementById('dateGrad').value = ended;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  populateCountryDropdown();
+  populateSchoolDatalist();
+  regenerateId();
+  document.getElementById('m_dateEnded').addEventListener('change', function() {
+    if (this.value) document.getElementById('m_dateGrad').value = this.value;
+  });
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['add','import','records'][i] === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'records') loadRecords();
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${{success:'✓',error:'✕',info:'ℹ'}[type]}</span><span>${msg}</span>`;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// Type (Standard/Intensive/Super Intensive/3 MTM) only applies to ESL.
+// Auto-set to N/A for other courses, but still let the user override if needed.
+// School → row background color (must match SCHOOL_COLORS in code.gs)
+// Base colors for known default schools
+const SCHOOL_COLORS_CLIENT = {
+  'Kagawa University':    '#D1FAE5',
+  'Hiroshima University': '#FDE68A',
+  'Yamaguchi University': '#BFDBFE',
+  'Suisan University':    '#DDD6FE',
+  'Ehime University':     '#FBCFE8',
+};
+const REGULAR_COLOR_CLIENT = '#FED7AA'; // light orange for regular students
+
+// Palette for auto-assigning colors to new/unknown schools
+const AUTO_COLOR_PALETTE = [
+  '#BBF7D0', // mint
+  '#FCA5A5', // salmon
+  '#FDE68A', // yellow (if Hiroshima not used)
+  '#C7D2FE', // indigo
+  '#A5F3FC', // cyan
+  '#F9A8D4', // rose
+  '#6EE7B7', // emerald
+  '#FCD34D', // amber
+  '#A78BFA', // violet
+  '#34D399', // green
+];
+const SCHOOL_COLOR_STORAGE_KEY = 'enrollmentRegistry_schoolColors';
+
+// In-memory cache of custom school->color assignments so we don't hit
+// localStorage (parse + stringify) on every single table row render.
+// It's lazily loaded once, then kept in sync; only written back to
+// localStorage when a genuinely new school is assigned a color.
+let _schoolColorCache = null;
+function _schoolColorStore() {
+  if (_schoolColorCache) return _schoolColorCache;
+  let stored = {};
+  try {
+    const raw = localStorage.getItem(SCHOOL_COLOR_STORAGE_KEY);
+    if (raw) stored = JSON.parse(raw);
+  } catch(e) {}
+  _schoolColorCache = stored;
+  return stored;
+}
+
+// Returns (and auto-assigns if needed) a color for a given school name.
+// Custom assignments are persisted in localStorage so they survive page reloads.
+function getSchoolColor(school) {
+  if (!school) return AUTO_COLOR_PALETTE[0];
+
+  // Check built-in defaults first
+  if (SCHOOL_COLORS_CLIENT[school]) return SCHOOL_COLORS_CLIENT[school];
+
+  const stored = _schoolColorStore();
+  if (stored[school]) return stored[school];
+
+  // Auto-assign the next unused palette color
+  const usedColors = new Set([
+    ...Object.values(SCHOOL_COLORS_CLIENT),
+    ...Object.values(stored)
+  ]);
+  const nextColor = AUTO_COLOR_PALETTE.find(c => !usedColors.has(c))
+    || AUTO_COLOR_PALETTE[Object.keys(stored).length % AUTO_COLOR_PALETTE.length];
+
+  stored[school] = nextColor;
+  try { localStorage.setItem(SCHOOL_COLOR_STORAGE_KEY, JSON.stringify(stored)); } catch(e) {}
+
+  return nextColor;
+}
+
+function getRowColor(isCamp, school) {
+  if (!isCamp) return REGULAR_COLOR_CLIENT;
+  return getSchoolColor(school);
+}
+
+// Auto-fills Date Started, Date Ended, and Graduation when a known school is typed.
+// Looks up existing records with the same school and copies their dates.
+// Dates remain editable after auto-fill.
+let _schoolFillTimer = null;
+function debouncedSchoolFill(prefix) {
+  prefix = prefix || '';
+  clearTimeout(_schoolFillTimer);
+  // Fire immediately if value exactly matches a known school, else wait 600ms
+  const val = document.getElementById(prefix + 'school').value.trim().toLowerCase();
+  const knownSchools = loadSchools().map(s => s.toLowerCase());
+  if (knownSchools.includes(val)) {
+    autoFillDatesFromSchool(prefix);
+  } else {
+    _schoolFillTimer = setTimeout(() => autoFillDatesFromSchool(prefix), 600);
+  }
+}
+
+async function autoFillDatesFromSchool(prefix) {
+  prefix = prefix || '';
+  const school = document.getElementById(prefix + 'school').value.trim();
+  const hint   = document.getElementById(prefix + 'schoolDateHint');
+  if (!school) { if (hint) hint.textContent = ''; return; }
+
+  // If records haven't been loaded yet (user is on Add tab), fetch them silently
+  if (!allRecords.length) {
+    if (hint) { hint.textContent = 'Looking up dates…'; hint.style.color = 'var(--muted)'; }
+    try {
+      const res  = await fetch(withAuth(GAS_URL + '?action=get'));
+      const data = await res.json();
+      allRecords = data.records || [];
+      saveSchoolsBatch(allRecords.filter(r => r.isCamp && r.school).map(r => r.school));
+      populateSchoolDatalist();
+    } catch(e) {
+      if (hint) hint.textContent = 'Could not fetch records.';
+      return;
+    }
+  }
+
+  // Find the most recently added record from the same school.
+  // Compare case-insensitively and trimmed so minor typing differences
+  // (e.g. "kagawa university" vs "Kagawa University") still match.
+  const schoolKey = school.trim().toLowerCase();
+  const match = [...allRecords].reverse().find(r =>
+    r.isCamp && (r.school || '').trim().toLowerCase() === schoolKey
+  );
+  if (!match) { if (hint) hint.textContent = ''; return; }
+
+  const started = toInputDate(match.dateStarted);
+  const ended   = toInputDate(match.dateEnded);
+  const grad    = toInputDate(match.dateGrad);
+
+  // Only fill fields that are currently blank, so we never clobber a date
+  // someone already typed or a value that was already saved on this record.
+  const startedEl = document.getElementById(prefix + 'dateStarted');
+  const endedEl   = document.getElementById(prefix + 'dateEnded');
+  const gradEl    = document.getElementById(prefix + 'dateGrad');
+  if (started && !startedEl.value) startedEl.value = started;
+  if (ended   && !endedEl.value)   endedEl.value   = ended;
+  if (grad    && !gradEl.value)    gradEl.value    = grad;
+
+  if (hint) {
+    hint.textContent = `✓ Dates auto-filled from existing ${school} records — editable`;
+    hint.style.color = 'var(--success)';
+  }
+}
+
+function toggleSchoolField() {
+  const hidden  = document.getElementById('isCamp');
+  const isOn    = hidden.value !== 'true';
+  hidden.value  = isOn ? 'true' : 'false';
+  const icon    = document.getElementById('campToggleIcon');
+  const label   = document.getElementById('campToggleLabel');
+  const btn     = document.getElementById('campToggle');
+  if (isOn) {
+    icon.textContent  = '🟢';
+    label.textContent = 'Camp';
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color       = 'var(--success)';
+    document.getElementById('schoolFieldWrap').style.display = '';
+  } else {
+    icon.textContent  = '⚪';
+    label.textContent = 'Regular';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color       = 'var(--muted)';
+    document.getElementById('school').value = '';
+    document.getElementById('schoolFieldWrap').style.display = 'none';
+  }
+}
+
+function toggleModalSchoolField() {
+  const hidden  = document.getElementById('m_isCamp');
+  const isOn    = hidden.value !== 'true';
+  hidden.value  = isOn ? 'true' : 'false';
+  const icon    = document.getElementById('m_campToggleIcon');
+  const label   = document.getElementById('m_campToggleLabel');
+  const btn     = document.getElementById('m_campToggle');
+  if (isOn) {
+    icon.textContent  = '🟢';
+    label.textContent = 'Camp';
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color       = 'var(--success)';
+    document.getElementById('m_schoolFieldWrap').style.display = '';
+  } else {
+    icon.textContent  = '⚪';
+    label.textContent = 'Regular';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color       = 'var(--muted)';
+    document.getElementById('m_school').value = '';
+    document.getElementById('m_schoolFieldWrap').style.display = 'none';
+  }
+}
+
+// Helper to reset toggle button to a given state without firing the toggle
+function setCampToggle(elementPrefix, campValue) {
+  const hidden = document.getElementById(elementPrefix + 'isCamp');
+  const icon   = document.getElementById(elementPrefix + 'campToggleIcon');
+  const label  = document.getElementById(elementPrefix + 'campToggleLabel');
+  const btn    = document.getElementById(elementPrefix + 'campToggle');
+  const wrap   = document.getElementById(elementPrefix + 'schoolFieldWrap');
+  hidden.value = campValue ? 'true' : 'false';
+  if (campValue) {
+    icon.textContent  = '🟢';
+    label.textContent = 'Camp';
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color       = 'var(--success)';
+    wrap.style.display = '';
+  } else {
+    icon.textContent  = '⚪';
+    label.textContent = 'Regular';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color       = 'var(--muted)';
+    wrap.style.display = 'none';
+  }
+}
+
+function toggleTypeField() {
+  const course = document.getElementById('course').value;
+  const typeEl = document.getElementById('type');
+  if (course && course !== 'ESL') {
+    typeEl.value = 'N/A';
+  } else if (course === 'ESL' && typeEl.value === 'N/A') {
+    typeEl.value = '';
+  }
+}
+
+function clearForm() {
+  ['studentId','fullName','country','course','type','dateStarted','dateEnded','dateGrad','birthDay','sex','memo','school'].forEach(id => {
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('error');
+  });
+  setCampToggle('', false);
+  const hint = document.getElementById('schoolDateHint');
+  if (hint) hint.textContent = '';
+  regenerateId();
+}
+
+function validate() {
+  const required = ['fullName','campus','course','type','dateStarted'];
+  let ok = true;
+  required.forEach(id => {
+    const el = document.getElementById(id);
+    const empty = !el.value.trim();
+    el.classList.toggle('error', empty);
+    if (empty) ok = false;
+  });
+  return ok;
+}
+
+async function saveRecord() {
+  if (!validate()) { toast('Fill in required fields.', 'error'); return; }
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+  const payload = {
+    action:      'add',
+    studentId:   document.getElementById('studentId').value.trim(),
+    fullName:    toTitleCase(document.getElementById('fullName').value.trim()),
+    campus:      document.getElementById('campus').value,
+    country:     document.getElementById('country').value.trim().toUpperCase(),
+    course:      document.getElementById('course').value,
+    type:        document.getElementById('type').value,
+    dateStarted: document.getElementById('dateStarted').value,
+    dateEnded:   document.getElementById('dateEnded').value,
+    dateGrad:    document.getElementById('dateGrad').value,
+    birthDay:    document.getElementById('birthDay').value,
+    sex:         document.getElementById('sex').value,
+    memo:        document.getElementById('memo').value.trim(),
+    isCamp:      document.getElementById('isCamp').value === 'true',
+    school:      document.getElementById('isCamp').value === 'true' ? toTitleCase(document.getElementById('school').value) : '',
+  };
+  // Remember any new school name for future suggestions
+  if (payload.isCamp && payload.school) {
+    saveSchool(payload.school);
+    populateSchoolDatalist();
+  }
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload(payload)) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); }
+    else if (data.status === 'ok') {
+      toast('Record saved!', 'success');
+      // Don't trust data.nextSeq from the server — it may be computed with the
+      // same flawed parsing that caused the ID corruption bug. Our own nextSeq
+      // was already correctly derived on load, so just increment it locally.
+      nextSeq = nextSeq + 1;
+      clearForm();
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch(e) { toast('Connection error.', 'error'); }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Save Record';
+}
+
+// ── BULK IMPORT ───────────────────────────────────────────────────────────────
+// Nationality code (ISO 2-letter) → registry nationality code, matches the
+// COUNTRY_CODES map used for the country dropdown.
+const ISO_TO_REGISTRY_CODE = {
+  'JP': 'J', 'PH': 'PHI', 'KR': 'K', 'CN': 'CHN', 'TW': 'TPE', 'VN': 'VIE',
+  'TH': 'THA', 'ID': 'INA', 'MY': 'MAS', 'SG': 'SGP', 'IN': 'IND',
+  'US': 'USA', 'GB': 'GBR', 'FR': 'FRA', 'DE': 'GER', 'IT': 'ITA',
+  'ES': 'ESP', 'BR': 'BRA', 'MX': 'MEX', 'RU': 'RUS', 'SA': 'KSA',
+};
+
+const ISO_TO_COUNTRY_NAME = {
+  'JP': 'Japan', 'PH': 'Philippines', 'KR': 'South Korea', 'CN': 'China',
+  'TW': 'Taiwan', 'VN': 'Vietnam', 'TH': 'Thailand', 'ID': 'Indonesia',
+  'MY': 'Malaysia', 'SG': 'Singapore', 'IN': 'India', 'US': 'United States',
+  'GB': 'United Kingdom', 'FR': 'France', 'DE': 'Germany', 'IT': 'Italy',
+  'ES': 'Spain', 'BR': 'Brazil', 'MX': 'Mexico', 'RU': 'Russia', 'SA': 'Saudi Arabia',
+};
+
+// Converts ALL CAPS (or any case) names into Title Case, e.g.
+// "CHIHIRO MUKAIGAWA" -> "Chihiro Mukaigawa". Keeps hyphenated/apostrophe
+// parts capitalized correctly too, e.g. "MARY-JANE O'CONNOR" -> "Mary-Jane O'Connor".
+// Converts the human-readable date strings the server returns (e.g.
+// "June 30, 2026" or "24th of July, 2026") back into "yyyy-MM-dd" so they
+// can be loaded into <input type="date"> fields in the edit modal.
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+
+function toInputDate(str) {
+  if (!str) return '';
+
+  // If it's already yyyy-MM-dd, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str.trim())) return str.trim();
+
+  // ISO timestamp (e.g. "2026-07-26T16:00:00.000Z") — extract date part directly
+  // to avoid UTC→local timezone shift
+  const iso = str.match(/^(\d{4}-\d{2}-\d{2})T/);
+  if (iso) return iso[1];
+
+  // Strip ordinal suffixes and "of": "24th of July, 2026" -> "24 July, 2026"
+  const cleaned = str.replace(/(\d+)(st|nd|rd|th)/g, '$1').replace(' of ', ' ');
+
+  // Try "Month Day, Year" (e.g. "June 30, 2026")
+  let m = cleaned.match(/^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/);
+  if (m) {
+    const monthIdx = MONTH_NAMES.findIndex(mo => mo.toLowerCase() === m[1].toLowerCase());
+    if (monthIdx > -1) {
+      const mm = String(monthIdx + 1).padStart(2, '0');
+      const dd = String(parseInt(m[2], 10)).padStart(2, '0');
+      return `${m[3]}-${mm}-${dd}`;
+    }
+  }
+
+  // Try "Day Month, Year" (e.g. "24 July, 2026")
+  m = cleaned.match(/^(\d{1,2})\s+([A-Za-z]+),\s*(\d{4})$/);
+  if (m) {
+    const monthIdx = MONTH_NAMES.findIndex(mo => mo.toLowerCase() === m[2].toLowerCase());
+    if (monthIdx > -1) {
+      const mm = String(monthIdx + 1).padStart(2, '0');
+      const dd = String(parseInt(m[1], 10)).padStart(2, '0');
+      return `${m[3]}-${mm}-${dd}`;
+    }
+  }
+
+  // Last resort: native Date (may have UTC offset, acceptable for rare edge cases)
+  const d = new Date(str);
+  if (!isNaN(d)) {
+    // Use UTC values to avoid timezone shift on ISO strings
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+// Calculates the number of weeks between Date Started and Date Ended,
+// reusing the same display-format parsing logic as toInputDate. Returns
+// text like "1 week" or "4 weeks" (ready for mail merge), or '' if either
+// date is missing/invalid. Used as a fallback if the server hasn't sent a
+// pre-computed weeks value yet.
+function calcWeeks(dateStartedStr, dateEndedStr) {
+  const start = toInputDate(dateStartedStr);
+  const end   = toInputDate(dateEndedStr);
+  if (!start || !end) return '';
+  const d1 = new Date(start + 'T00:00:00');
+  const d2 = new Date(end + 'T00:00:00');
+  if (isNaN(d1) || isNaN(d2)) return '';
+  const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return '';
+  const n = Math.round(diffDays / 7);
+  return n === 1 ? '1 week' : `${n} weeks`;
+}
+
+function toTitleCase(str) {
+  if (!str) return '';
+  return str.trim().toLowerCase().replace(/[a-z]+/gi, word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  );
+}
+
+// Normalizes raw Course values from the source sheet into the short form
+// used in the registry: ESL, TOEIC, IELTS, TOEFL, or N/A.
+function normalizeCourse(rawCourse) {
+  const c = (rawCourse || '').trim().toUpperCase();
+  if (c === 'ESL')   return 'ESL';
+  if (c === 'TOEIC') return 'TOEIC';
+  if (c === 'IELTS') return 'IELTS';
+  if (c === 'TOEFL') return 'TOEFL';
+  return 'N/A'; // blank, "NO LESSON", or anything unrecognized
+}
+
+// Normalizes raw Type values (Standard/Intensive/Super Intensive/3 MTM).
+// Type only really applies to ESL; everything else becomes N/A.
+function normalizeType(course, rawType) {
+  if (course !== 'ESL') return 'N/A';
+  const t = (rawType || '').trim();
+  if (!t || t.toUpperCase() === 'NO LESSON') return 'N/A';
+  return t;
+}
+
+// Tokenizes pasted Google Sheets data into rows of columns, respecting
+// quoted fields that may contain embedded newlines or tabs (e.g. a multi-line
+// memo like "Aug.6\nNeed to provide lessons" copied straight from Sheets).
+function tokenizeTSV(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  let i = 0;
+  const n = text.length;
+
+  while (i < n) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; } // escaped quote
+        inQuotes = false; i++; continue;
+      }
+      field += ch; i++; continue;
+    }
+
+    if (ch === '"' && field === '') { inQuotes = true; i++; continue; }
+    if (ch === '\t') { row.push(field); field = ''; i++; continue; }
+    if (ch === '\r') { i++; continue; }
+    if (ch === '\n') {
+      row.push(field); field = '';
+      rows.push(row); row = [];
+      i++; continue;
+    }
+    field += ch; i++;
+  }
+  // flush trailing field/row
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+
+  return rows
+    .map(r => r.map(c => c.trim()))
+    .filter(r => r.some(c => c.length));
+}
+
+function parseImportText(text) {
+  const rows = tokenizeTSV(text);
+  const parsed = [];
+  rows.forEach(cols => {
+    // Expected order: Name, Birthday, Sex, Nationality, Week, StartingDay,
+    // GraduateDay, Agency, Course, Type, ArrivalDate, FlightNo, ArrivalTime, Memo
+    // Tolerate a leading row-number column by detecting if col[0] is purely numeric
+    // and col[1] looks like a name.
+    let c = cols;
+    if (c.length > 1 && /^\d+$/.test(c[0]) && c[1] && /[A-Za-z]/.test(c[1])) {
+      c = c.slice(1);
+    }
+    // Pad missing trailing columns (common when copying from Sheets drops
+    // empty cells at the end of a row) so destructuring below stays aligned.
+    const EXPECTED_COLS = 14;
+    while (c.length < EXPECTED_COLS) c.push('');
+    if (!c[0]) return; // no name at all — not a real row
+
+    const [name, birthday, sex, nationality, week, startDay, gradDay,
+           agency, rawCourse, rawType, arrivalDate, flightNo, arrivalTime, memo] = c;
+
+    if (!name) return;
+    // NO LESSON / blank course are both imported, just normalized to "N/A".
+
+    const isoCode  = (nationality || '').trim().toUpperCase();
+    const country  = ISO_TO_COUNTRY_NAME[isoCode] || nationality || '';
+    const natCode  = ISO_TO_REGISTRY_CODE[isoCode] || (country ? country[0].toUpperCase() : 'X');
+    const course   = normalizeCourse(rawCourse);
+    const type     = normalizeType(course, rawType);
+
+    parsed.push({
+      fullName:    toTitleCase(name),
+      birthDay:    birthday || '',
+      sex:         (sex || '').trim().toUpperCase(),
+      country:     country.toUpperCase(),
+      natCode:     natCode,
+      week:        week || '',
+      dateStarted: startDay || '',
+      dateGrad:    gradDay || '',
+      dateEnded:   gradDay || '',
+      agency:      agency || '',
+      course:      course,
+      type:        type,
+      arrivalDate: arrivalDate || '',
+      flightNo:    flightNo || '',
+      arrivalTime: arrivalTime || '',
+      memo:        (memo || '').replace(/\n/g, ' — '), // flatten multi-line memo
+    });
+  });
+  return parsed;
+}
+
+let importedRows = [];
+
+function previewImport() {
+  const text = document.getElementById('importText').value;
+  importedRows = parseImportText(text);
+  const wrap = document.getElementById('importPreviewWrap');
+  const body = document.getElementById('importPreviewBody');
+  const btn  = document.getElementById('importBtn');
+
+  if (!importedRows.length) {
+    toast('No valid rows found. Check the format.', 'error');
+    wrap.style.display = 'none';
+    btn.disabled = true;
+    return;
+  }
+
+  body.innerHTML = importedRows.map(r => `
+    <tr>
+      <td class="td-name">${r.fullName}</td>
+      <td class="td-muted">${r.country}</td>
+      <td>${courseBadge(r.course)}</td>
+      <td class="td-muted">${r.type}</td>
+      <td class="td-muted">${r.dateStarted}</td>
+      <td class="td-muted">${r.dateGrad}</td>
+      <td class="td-muted">${r.memo}</td>
+    </tr>
+  `).join('');
+
+  wrap.style.display = 'block';
+  btn.disabled = false;
+  toast(`${importedRows.length} record(s) ready to import.`, 'info');
+}
+
+async function runImport() {
+  if (!importedRows.length) { toast('Nothing to import. Click Preview first.', 'error'); return; }
+  const campus = document.getElementById('importCampus').value;
+  if (!campus) { toast('Please select a Campus for this batch first.', 'error'); return; }
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Importing…';
+
+  // Pre-assign sequential student IDs client-side so each row gets a unique one
+  let seq = nextSeq;
+  const rowsWithIds = importedRows.map(r => {
+    const id = buildId(seq);
+    seq++;
+    return { ...r, studentId: id, campus };
+  });
+
+  const payload = { action: 'bulkImport', rows: rowsWithIds };
+
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload(payload)) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); }
+    else if (data.status === 'ok') {
+      toast(`Imported ${data.added} record(s)!`, 'success');
+      // Don't trust data.nextSeq from the server — same reasoning as saveRecord.
+      // "seq" already reflects the next unused number after this batch.
+      nextSeq = seq;
+      importedRows = [];
+      document.getElementById('importText').value = '';
+      document.getElementById('importPreviewWrap').style.display = 'none';
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch(e) { toast('Connection error.', 'error'); }
+
+  btn.disabled = false;
+  btn.textContent = 'Import All';
+}
+
+let allRecords = [];
+let currentFilteredRecords = [];
+let sortCol = -1, sortAsc = true;
+
+async function loadRecords() {
+  document.getElementById('recordsBody').innerHTML =
+    '<tr class="loading-row"><td colspan="13"><span class="spinner"></span> Loading…</td></tr>';
+  try {
+    const res  = await fetch(withAuth(GAS_URL + '?action=get'));
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    allRecords = data.records || [];
+    // Student IDs are now just plain numbers going forward, but older records
+    // may still have the legacy "CU-<code>26<seq>" format (some of them
+    // corrupted by a historical bug that doubled up the "26"). Handle both:
+    //   - legacy format: strip repeated leading "26" pairs to recover the
+    //     true sequence number
+    //   - plain number: parse directly, no stripping (a real sequence like
+    //     260 must not be mistaken for corruption)
+    const seqs = allRecords.map(r => extractSeq(r.studentId));
+    if (seqs.length) nextSeq = Math.max(...seqs) + 1;
+    // Auto-remember any school names already in the records
+    saveSchoolsBatch(allRecords.filter(r => r.isCamp && r.school).map(r => r.school));
+    populateSchoolDatalist();
+    populateSchoolFilter();
+    filterTable();
+    document.getElementById('totalBadge').textContent = allRecords.length + ' records';
+  } catch(e) {
+    document.getElementById('recordsBody').innerHTML =
+      '<tr><td colspan="13" style="text-align:center;padding:48px;color:var(--danger);">Failed to load records.</td></tr>';
+  }
+}
+
+function courseBadge(c) {
+  if (!c) return '—';
+  if (c === 'N/A') return `<span class="badge" style="background:#F3F4F6;color:#6B7280;">N/A</span>`;
+  const cls = c === 'ESL' ? 'badge-esl' : c === 'TOEIC' ? 'badge-toeic' : c === 'IELTS' ? 'badge-ielts' : 'badge-toefl';
+  return `<span class="badge ${cls}">${c}</span>`;
+}
+
+function campusBadge(c) {
+  if (!c) return '<span class="td-muted">—</span>';
+  const cls = c === 'CWA-Mabolo' ? 'badge-campus-mabolo' : c === 'CWA-USPF' ? 'badge-campus-uspf' : c === 'CWA-IAU' ? 'badge-campus-iau' : '';
+  return cls ? `<span class="badge ${cls}">${c}</span>` : `<span class="td-muted">${c}</span>`;
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('recordsBody');
+  document.getElementById('recordCount').textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}`;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="13"><div class="empty-state"><div class="icon">📋</div><p>No records found.</p></div></td></tr>';
+    return;
+  }
+
+  // Sort: regular students first (light orange), then camp students grouped by school
+  const sorted = [...rows].sort((a, b) => {
+    if (a.isCamp === b.isCamp) {
+      if (a.isCamp) return (a.school || '').localeCompare(b.school || '');
+      return 0;
+    }
+    return a.isCamp ? 1 : -1; // regular first
+  });
+
+  tbody.innerHTML = sorted.map((r, i) => {
+    const endedCell = r.dateEnded ? r.dateEnded : `<span class="td-tentative">Tentative</span>`;
+    const gradCell  = r.dateGrad  ? r.dateGrad  : `<span class="td-tentative">Tentative</span>`;
+    const weeks     = (r.weeks !== '' && r.weeks != null) ? r.weeks : calcWeeks(r.dateStarted, r.dateEnded);
+    const bgColor   = getRowColor(r.isCamp, r.school);
+    const campBadge = r.isCamp
+      ? `<span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#064E3B;color:#D1FAE5;margin-left:6px;">CAMP</span>`
+      : '';
+    return `<tr onclick="openEditByRow(${r.rowNo})" style="background:${bgColor};">
+      <td class="td-muted" style="text-align:center;">${i + 1}</td>
+      <td class="td-id">${r.studentId || '—'}</td>
+      <td class="td-name">${r.fullName || '—'}${campBadge}</td>
+      <td>${campusBadge(r.campus)}</td>
+      <td class="td-muted">${r.country || '—'}</td>
+      <td>${courseBadge(r.course)}</td>
+      <td class="td-muted">${r.type || '—'}</td>
+      <td class="td-muted">${r.dateStarted || '—'}</td>
+      <td>${endedCell}</td>
+      <td>${gradCell}</td>
+      <td class="td-muted">${weeks || '—'}</td>
+      <td class="td-muted">${r.isCamp && r.school ? `<span style="font-size:11px;font-weight:600;">${r.school}</span>` : (r.memo || '—')}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 10px;">Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable() {
+  const q       = document.getElementById('searchQuery').value.toLowerCase();
+  const country = document.getElementById('searchCountry').value.toLowerCase();
+  const course  = document.getElementById('searchCourse').value;
+  const school  = document.getElementById('searchSchool').value;
+  const campus  = document.getElementById('searchCampus').value;
+  const filtered = allRecords.filter(r =>
+    (!q       || (r.fullName||'').toLowerCase().includes(q) || (r.studentId||'').toLowerCase().includes(q)) &&
+    (!country || (r.country||'').toLowerCase().includes(country)) &&
+    (!course  || r.course === course) &&
+    (!school  || (school === '__none__' ? !r.isCamp || !r.school : (r.isCamp && r.school === school))) &&
+    (!campus  || r.campus === campus)
+  );
+  currentFilteredRecords = filtered;
+  renderTable(filtered);
+}
+
+// Rebuilds the School filter dropdown from schools actually present in the
+// currently loaded records (not just the datalist of ever-used names).
+function populateSchoolFilter() {
+  const sel = document.getElementById('searchSchool');
+  const prevValue = sel.value;
+  const schools = [...new Set(
+    allRecords.filter(r => r.isCamp && r.school).map(r => r.school)
+  )].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">All schools</option>'
+    + '<option value="__none__">No school / regular</option>'
+    + schools.map(s => `<option value="${s.replace(/"/g,'&quot;')}">${s}</option>`).join('');
+  if ([...sel.options].some(o => o.value === prevValue)) sel.value = prevValue;
+}
+
+function performSort(col, asc) {
+  sortCol = col; sortAsc = asc;
+  document.querySelectorAll('thead th').forEach((th, i) => {
+    th.classList.toggle('sorted', i === col);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = i === col ? (sortAsc ? '↑' : '↓') : '↕';
+  });
+  const keys = [null, 'studentId','fullName','campus','country','course','type','dateStarted','dateEnded','dateGrad'];
+  const key  = keys[col];
+  allRecords.sort((a, b) => {
+    const va = (a[key]||'').toString().toLowerCase();
+    const vb = (b[key]||'').toString().toLowerCase();
+    return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  const dd = document.getElementById('sortDropdown');
+  if (dd) dd.value = col + '_' + (sortAsc ? 'asc' : 'desc');
+  filterTable();
+}
+
+function sortTable(col) {
+  const asc = (sortCol === col) ? !sortAsc : true;
+  performSort(col, asc);
+}
+
+function sortFromDropdown() {
+  const val = document.getElementById('sortDropdown').value;
+  if (!val) return;
+  const [colStr, dir] = val.split('_');
+  performSort(parseInt(colStr, 10), dir === 'asc');
+}
+
+// ── EXPORT XLSX ───────────────────────────────────────────────────────────────
+function exportXLSX(onlyFiltered) {
+  const source = onlyFiltered ? currentFilteredRecords : allRecords;
+  if (!source.length) {
+    toast(onlyFiltered ? 'No matching records to export.' : 'No records to export.', 'error');
+    return;
+  }
+  const headers = ['Student ID', 'Full Name', 'Campus', 'Country of Origin', 'Course', 'Type', 'Date Started', 'Date Ended', 'Date of Graduation', 'Birth Day', 'Sex', 'Week', 'Agency', 'Arrival Date', 'Flight No.', 'Arrival Time', 'Memo', 'Weeks', 'Is Camp', 'School'];
+  const rows = source.map(r => [
+    { t: 's', v: r.studentId   || '' },
+    { t: 's', v: r.fullName    || '' },
+    { t: 's', v: r.campus      || '' },
+    { t: 's', v: r.country     || '' },
+    { t: 's', v: r.course      || '' },
+    { t: 's', v: r.type        || '' },
+    { t: 's', v: r.dateStarted || '' },
+    { t: 's', v: r.dateEnded   || '' },
+    { t: 's', v: r.dateGrad    || '' },
+    { t: 's', v: r.birthDay    || '' },
+    { t: 's', v: r.sex         || '' },
+    { t: 's', v: r.week        || '' },
+    { t: 's', v: r.agency      || '' },
+    { t: 's', v: r.arrivalDate || '' },
+    { t: 's', v: r.flightNo    || '' },
+    { t: 's', v: r.arrivalTime || '' },
+    { t: 's', v: r.memo        || '' },
+    { t: 's', v: (r.weeks !== '' && r.weeks != null) ? r.weeks : calcWeeks(r.dateStarted, r.dateEnded) },
+    { t: 's', v: r.isCamp ? 'Yes' : 'No' },
+    { t: 's', v: r.school || '' },
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [
+    { wch: 14 }, { wch: 26 }, { wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 16 },
+    { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 18 },
+    { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 18 },
+    { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 20 }
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Records');
+  const today = new Date().toISOString().slice(0,10);
+  const suffix = onlyFiltered ? '_filtered' : '';
+  XLSX.writeFile(wb, `enrollment_records${suffix}_${today}.xlsx`);
+  toast(onlyFiltered ? `Exported ${source.length} filtered record${source.length!==1?'s':''}!` : 'Exported all records!', 'success');
+}
+
+// ── EDIT MODAL ────────────────────────────────────────────────────────────────
+let editingIndex = -1;
+
+function openEditByRow(rowNo) {
+  const i = allRecords.findIndex(rec => rec.rowNo === rowNo);
+  if (i === -1) { toast('Could not find that record. Try refreshing.', 'error'); return; }
+  editingIndex = i;
+  const r = allRecords[i];
+  document.getElementById('m_id').value          = r.studentId   || '';
+  document.getElementById('m_fullName').value    = r.fullName    || '';
+  document.getElementById('m_campus').value      = r.campus      || '';
+  document.getElementById('m_country').value     = (r.country || '').toUpperCase();
+  document.getElementById('m_course').value      = r.course      || '';
+  document.getElementById('m_type').value        = r.type        || '';
+  document.getElementById('m_dateStarted').value = toInputDate(r.dateStarted);
+  document.getElementById('m_dateEnded').value   = toInputDate(r.dateEnded);
+  document.getElementById('m_dateGrad').value    = toInputDate(r.dateGrad);
+  document.getElementById('m_birthDay').value    = toInputDate(r.birthDay);
+  document.getElementById('m_sex').value         = r.sex         || '';
+  document.getElementById('m_memo').value        = r.memo        || '';
+  setCampToggle('m_', r.isCamp || false);
+  document.getElementById('m_school').value      = r.school      || '';
+  document.getElementById('m_schoolDateHint').textContent = '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('open');
+  editingIndex = -1;
+}
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+async function saveEdit() {
+  const btn = document.getElementById('modalSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+  const r = allRecords[editingIndex];
+  const payload = {
+    action:      'edit',
+    rowNo:       r.rowNo,
+    studentId:   document.getElementById('m_id').value.trim(),
+    fullName:    toTitleCase(document.getElementById('m_fullName').value.trim()),
+    campus:      document.getElementById('m_campus').value,
+    country:     document.getElementById('m_country').value.trim().toUpperCase(),
+    course:      document.getElementById('m_course').value,
+    type:        document.getElementById('m_type').value,
+    dateStarted: document.getElementById('m_dateStarted').value,
+    dateEnded:   document.getElementById('m_dateEnded').value,
+    dateGrad:    document.getElementById('m_dateGrad').value,
+    birthDay:    document.getElementById('m_birthDay').value,
+    sex:         document.getElementById('m_sex').value,
+    memo:        document.getElementById('m_memo').value.trim(),
+    isCamp:      document.getElementById('m_isCamp').value === 'true',
+    school:      document.getElementById('m_isCamp').value === 'true' ? toTitleCase(document.getElementById('m_school').value) : '',
+  };
+  // Remember any new school name for future suggestions
+  if (payload.isCamp && payload.school) {
+    saveSchool(payload.school);
+    populateSchoolDatalist();
+  }
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload(payload)) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); }
+    else if (data.status === 'ok') {
+      toast('Record updated!', 'success');
+      closeModal();
+      loadRecords();
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch(e) { toast('Connection error.', 'error'); }
+  btn.disabled = false;
+  btn.textContent = 'Save Changes';
+}
+</script>
+
+</div><!-- /app-shell -->
+
+</body>
+</html>
