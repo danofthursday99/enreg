@@ -277,7 +277,32 @@
     </div>
   </div>
 </div>
-
+<!-- PHOTO ADJUST MODAL -->
+<div class="modal-overlay" id="photoAdjustModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title">Adjust Photo</span>
+      <button class="modal-close" onclick="closePhotoAdjustModal()">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div id="paCropStage" style="position:relative;width:260px;height:260px;margin:0 auto;border-radius:50%;overflow:hidden;background:#EEF2F5;cursor:grab;touch-action:none;">
+        <img id="paImg" src="" alt="" style="position:absolute;top:0;left:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
+        <span style="font-size:11px;color:var(--muted);">−</span>
+        <input type="range" id="paZoom" min="100" max="300" value="100" style="flex:1;" oninput="paApplyTransform()">
+        <span style="font-size:11px;color:var(--muted);">+</span>
+      </div>
+      <span class="field-hint">Drag to reposition · use slider to zoom</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closePhotoAdjustModal()">Cancel</button>
+      <div class="ml-auto">
+        <button class="btn btn-primary btn-sm" id="paSaveBtn" onclick="savePhotoAdjust()">Save Photo</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- HIDDEN ID CARD TEMPLATES (rendered offscreen, captured via html2canvas) -->
 <div id="idCardTemplate">
   <div class="idc-tri-dark"></div>
@@ -1957,45 +1982,130 @@ function editFromProfile() {
 // usually have the face there) so the subject fills the circular ID photo
 // instead of looking small/far away when the source photo has a lot of
 // background or the person isn't perfectly centered.
-function resizeImageToDataUri(file, maxDim, quality) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
-    reader.onload = () => {
-      img.onload = () => {
-        const side = Math.min(img.width, img.height);
-        const sx = (img.width - side) / 2;
-        const sy = img.height > img.width
-          ? Math.max(0, (img.height - side) * 0.35) // portrait photo: bias toward the top (face area)
-          : (img.height - side) / 2;                // landscape/square: center crop
-        const canvas = document.createElement('canvas');
-        canvas.width = maxDim; canvas.height = maxDim;
-        canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, maxDim, maxDim);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = reader.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// ── PHOTO ADJUST ─────────────────────────────────────────────────────────
+let paNaturalW = 0, paNaturalH = 0, paScale = 1, paMinScale = 1;
+let paOffsetX = 0, paOffsetY = 0;
+let paDragging = false, paDragStartX = 0, paDragStartY = 0, paStartOffsetX = 0, paStartOffsetY = 0;
+const PA_STAGE = 260;
 
-async function handlePhotoSelect(event) {
+function handlePhotoSelect(event) {
   const file = event.target.files[0];
   event.target.value = '';
   if (!file || !profileRowNo) return;
   if (!file.type.startsWith('image/')) { toast('Please choose an image file.', 'error'); return; }
 
-  const btn = document.getElementById('changePhotoBtn');
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      paNaturalW = img.width;
+      paNaturalH = img.height;
+      paMinScale = PA_STAGE / Math.min(paNaturalW, paNaturalH);
+      paScale = paMinScale;
+      paOffsetX = (PA_STAGE - paNaturalW * paScale) / 2;
+      const centeredY = (PA_STAGE - paNaturalH * paScale) / 2;
+      paOffsetY = paNaturalH > paNaturalW
+        ? Math.min(0, centeredY + (PA_STAGE - paNaturalH * paScale) * 0.15)
+        : centeredY;
+
+      const paImg = document.getElementById('paImg');
+      paImg.src = reader.result;
+      paImg.style.width = paNaturalW + 'px';
+      paImg.style.height = paNaturalH + 'px';
+      document.getElementById('paZoom').value = 100;
+      paApplyTransform();
+      document.getElementById('photoAdjustModal').classList.add('open');
+    };
+    img.onerror = () => toast('Could not read that image.', 'error');
+    img.src = reader.result;
+  };
+  reader.onerror = () => toast('Could not read that image.', 'error');
+  reader.readAsDataURL(file);
+}
+
+function paApplyTransform() {
+  const zoomPct = parseInt(document.getElementById('paZoom').value, 10) || 100;
+  const newScale = paMinScale * (zoomPct / 100);
+  const cx = PA_STAGE / 2, cy = PA_STAGE / 2;
+  const imgCx = (cx - paOffsetX) / paScale;
+  const imgCy = (cy - paOffsetY) / paScale;
+  paOffsetX = cx - imgCx * newScale;
+  paOffsetY = cy - imgCy * newScale;
+  paScale = newScale;
+  paClampOffset();
+  paRender();
+}
+
+function paClampOffset() {
+  const w = paNaturalW * paScale, h = paNaturalH * paScale;
+  const minX = PA_STAGE - w, minY = PA_STAGE - h;
+  paOffsetX = Math.min(0, Math.max(minX, paOffsetX));
+  paOffsetY = Math.min(0, Math.max(minY, paOffsetY));
+}
+
+function paRender() {
+  document.getElementById('paImg').style.transform = `translate(${paOffsetX}px, ${paOffsetY}px) scale(${paScale})`;
+}
+
+function paDragStart(clientX, clientY) {
+  paDragging = true;
+  paDragStartX = clientX; paDragStartY = clientY;
+  paStartOffsetX = paOffsetX; paStartOffsetY = paOffsetY;
+  document.getElementById('paCropStage').style.cursor = 'grabbing';
+}
+function paDragMove(clientX, clientY) {
+  if (!paDragging) return;
+  paOffsetX = paStartOffsetX + (clientX - paDragStartX);
+  paOffsetY = paStartOffsetY + (clientY - paDragStartY);
+  paClampOffset();
+  paRender();
+}
+function paDragEnd() {
+  paDragging = false;
+  const stage = document.getElementById('paCropStage');
+  if (stage) stage.style.cursor = 'grab';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const stage = document.getElementById('paCropStage');
+  if (!stage) return;
+  stage.addEventListener('mousedown', e => { paDragStart(e.clientX, e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', e => paDragMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', paDragEnd);
+  stage.addEventListener('touchstart', e => { const t = e.touches[0]; paDragStart(t.clientX, t.clientY); }, { passive: true });
+  stage.addEventListener('touchmove', e => { const t = e.touches[0]; paDragMove(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
+  stage.addEventListener('touchend', paDragEnd);
+});
+
+function closePhotoAdjustModal() {
+  document.getElementById('photoAdjustModal').classList.remove('open');
+  document.getElementById('paImg').src = '';
+}
+document.getElementById('photoAdjustModal').addEventListener('click', function(e) {
+  if (e.target === this) closePhotoAdjustModal();
+});
+
+async function savePhotoAdjust() {
+  if (!profileRowNo) return;
+  const btn = document.getElementById('paSaveBtn');
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
+  btn.textContent = 'Saving…';
+
+  const OUT = 240;
+  const canvas = document.createElement('canvas');
+  canvas.width = OUT; canvas.height = OUT;
+  const ctx = canvas.getContext('2d');
+  const paImg = document.getElementById('paImg');
+  const ratio = OUT / PA_STAGE;
+  ctx.drawImage(
+    paImg, 0, 0, paNaturalW, paNaturalH,
+    paOffsetX * ratio, paOffsetY * ratio, paNaturalW * paScale * ratio, paNaturalH * paScale * ratio
+  );
+
+  let dataUri = canvas.toDataURL('image/jpeg', 0.7);
+  if (dataUri.length > 45000) dataUri = canvas.toDataURL('image/jpeg', 0.5);
 
   try {
-    let dataUri = await resizeImageToDataUri(file, 240, 0.7);
-    // If still too big (very detailed photo), compress further.
-    if (dataUri.length > 45000) dataUri = await resizeImageToDataUri(file, 160, 0.5);
-
     const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'uploadPhoto', rowNo: profileRowNo, photoDataUri: dataUri })) });
     const data = await res.json();
     if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
@@ -2004,6 +2114,7 @@ async function handlePhotoSelect(event) {
       if (i !== -1) allRecords[i].photo = dataUri;
       document.getElementById('profilePhotoBox').outerHTML = `<img class="profile-photo" id="profilePhotoBox" src="${dataUri}" alt="">`;
       toast('Photo updated!', 'success');
+      closePhotoAdjustModal();
     } else {
       toast('Error: ' + (data.message || 'Unknown'), 'error');
     }
@@ -2011,7 +2122,7 @@ async function handlePhotoSelect(event) {
     toast('Connection error while uploading photo.', 'error');
   }
   btn.disabled = false;
-  btn.textContent = 'Change Photo';
+  btn.textContent = 'Save Photo';
 }
 
 // ── ID CARD ASSETS (embedded, extracted from the official CU/CWA templates) ──
