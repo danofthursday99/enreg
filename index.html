@@ -805,6 +805,7 @@
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0 selected</span>
         <button class="btn btn-ghost btn-sm" onclick="bulkMarkGraduated()">Mark Graduated Today</button>
+        <button class="btn btn-success btn-sm" id="bulkIdCardBtn" onclick="bulkDownloadIdCards()">⬇ ID Cards (Front, PDF)</button>
         <button class="btn btn-ghost btn-sm" onclick="bulkArchive(true)">Archive Selected</button>
         <button class="btn btn-ghost btn-sm" onclick="bulkArchive(false)">Restore Selected</button>
         <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
@@ -2483,10 +2484,11 @@ async function previewTemplate() {
   }, 3500);
 }
 
-async function downloadIdCard(format) {
-  const r = allRecords.find(rec => rec.rowNo === profileRowNo);
-  if (!r) return;
-
+// Populates the offscreen #idCardTemplate with a given student's FRONT design
+// (uploaded template if one exists for their campus/school, else the built-in
+// triangle design) and returns the captured html2canvas canvas. Shared by both
+// the single-card download and the batch download, so the two never drift.
+async function renderCardFrontFor(r) {
   const front = document.getElementById('idCardTemplate');
   const tmpl = getCardTemplate(templateKeyFor(r)) || getCardTemplate('default');
 
@@ -2524,16 +2526,27 @@ async function downloadIdCard(format) {
     document.getElementById('idcId').style.top = '';
   }
 
-  // ── Populate BACK (reuses the real back template image as-is) ──
-  const backColorKey = cardColorFor(r);
-  document.getElementById('idcBackImg').src = ID_CARD_ASSETS.backs[backColorKey] || ID_CARD_ASSETS.backs.blue;
+  // Let any just-set <img> src (seal/logo/photo) actually finish painting
+  // before html2canvas snapshots the element — avoids blank logos on fast loops.
+  await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+
+  return html2canvas(front, { scale: 2.5, backgroundColor: '#ffffff' });
+}
+
+async function downloadIdCard(format) {
+  const r = allRecords.find(rec => rec.rowNo === profileRowNo);
+  if (!r) return;
 
   const safeId = (r.studentId || r.fullName || 'student').toString().replace(/[^a-z0-9]/gi, '_');
 
   try {
-    const frontCanvas = await html2canvas(front, { scale: 2.5, backgroundColor: '#ffffff' });
-    const backEl      = document.getElementById('idCardBackTemplate');
-    const backCanvas  = await html2canvas(backEl, { scale: 2.5, backgroundColor: '#ffffff' });
+    const frontCanvas = await renderCardFrontFor(r);
+
+    // ── Populate BACK (reuses the real back template image as-is) ──
+    const backColorKey = cardColorFor(r);
+    document.getElementById('idcBackImg').src = ID_CARD_ASSETS.backs[backColorKey] || ID_CARD_ASSETS.backs.blue;
+    const backEl     = document.getElementById('idCardBackTemplate');
+    const backCanvas = await html2canvas(backEl, { scale: 2.5, backgroundColor: '#ffffff' });
 
     if (format === 'png') {
       [['front', frontCanvas], ['back', backCanvas]].forEach(([side, canvas]) => {
@@ -2554,6 +2567,49 @@ async function downloadIdCard(format) {
   } catch (e) {
     toast('Could not generate ID card.', 'error');
   }
+}
+
+// ── BATCH ID CARD DOWNLOAD (front only — no back page, per user request) ────
+// Compiles the FRONT of every selected student's ID card into a single
+// multi-page PDF, one card per page — ideal for handing straight to a print
+// shop. Skips the back entirely since that's a static design already on hand.
+async function bulkDownloadIdCards() {
+  if (!selectedRows.size) { toast('Select at least one student first.', 'error'); return; }
+
+  const records = [...selectedRows]
+    .map(rowNo => allRecords.find(rec => rec.rowNo === rowNo))
+    .filter(Boolean);
+
+  if (!records.length) { toast('Could not find the selected records. Try refreshing.', 'error'); return; }
+
+  const btn = document.getElementById('bulkIdCardBtn');
+  const originalLabel = btn.innerHTML;
+  btn.disabled = true;
+
+  try {
+    const { jsPDF } = window.jspdf;
+    let pdf = null;
+
+    for (let i = 0; i < records.length; i++) {
+      btn.innerHTML = `<span class="spinner"></span> Rendering ${i + 1}/${records.length}…`;
+      const canvas = await renderCardFrontFor(records[i]);
+      if (!pdf) {
+        pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
+      } else {
+        pdf.addPage([canvas.width, canvas.height], 'portrait');
+      }
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    pdf.save(`id_cards_batch_${records.length}_${today}.pdf`);
+    toast(`Downloaded ${records.length} ID card(s) as one PDF!`, 'success');
+  } catch (e) {
+    toast('Could not generate batch PDF.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = originalLabel;
 }
 
 function openEditByRow(rowNo) {
