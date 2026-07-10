@@ -393,13 +393,15 @@
       </label>
 
       <div style="margin-top:18px;">
-        <label style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Placement (% of card)</label>
+        <label style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Placement (% of card) &amp; Font Size (px)</label>
         <div class="tmpl-pos-grid">
           <div class="field"><label>Photo Top</label><input type="number" id="tmplPhotoTop" value="24"></div>
           <div class="field"><label>Photo Left</label><input type="number" id="tmplPhotoLeft" value="50"></div>
           <div class="field"><label>Photo Size</label><input type="number" id="tmplPhotoSize" value="52"></div>
           <div class="field"><label>Name Top</label><input type="number" id="tmplNameTop" value="62"></div>
+          <div class="field"><label>Name Font Size</label><input type="number" id="tmplNameSize" value="15"></div>
           <div class="field"><label>ID Number Top</label><input type="number" id="tmplIdTop" value="68"></div>
+          <div class="field"><label>ID Font Size</label><input type="number" id="tmplIdSize" value="11"></div>
         </div>
         <span class="field-hint">Click "Preview" to check placement on screen before saving.</span>
       </div>
@@ -2349,14 +2351,18 @@ function loadTemplateIntoForm() {
     document.getElementById('tmplPhotoLeft').value = t.photoLeft;
     document.getElementById('tmplPhotoSize').value = t.photoSize;
     document.getElementById('tmplNameTop').value   = t.nameTop;
+    document.getElementById('tmplNameSize').value  = t.nameSize  != null ? t.nameSize  : 15;
     document.getElementById('tmplIdTop').value     = t.idTop;
+    document.getElementById('tmplIdSize').value    = t.idSize    != null ? t.idSize    : 11;
   } else {
     wrap.style.display = 'none';
     document.getElementById('tmplPhotoTop').value  = 24;
     document.getElementById('tmplPhotoLeft').value = 50;
     document.getElementById('tmplPhotoSize').value = 52;
     document.getElementById('tmplNameTop').value   = 62;
+    document.getElementById('tmplNameSize').value  = 15;
     document.getElementById('tmplIdTop').value     = 68;
+    document.getElementById('tmplIdSize').value    = 11;
   }
 }
 
@@ -2394,7 +2400,9 @@ function readTemplateFormValues() {
     photoLeft: parseFloat(document.getElementById('tmplPhotoLeft').value) || 50,
     photoSize: parseFloat(document.getElementById('tmplPhotoSize').value) || 52,
     nameTop:   parseFloat(document.getElementById('tmplNameTop').value)   || 62,
+    nameSize:  parseFloat(document.getElementById('tmplNameSize').value)  || 15,
     idTop:     parseFloat(document.getElementById('tmplIdTop').value)     || 68,
+    idSize:    parseFloat(document.getElementById('tmplIdSize').value)    || 11,
   };
 }
 
@@ -2438,7 +2446,9 @@ function renderCardTemplate(tmpl, data) {
       photoWrap.style.top    = (h * tmpl.photoTop  / 100) + 'px';
       photoWrap.style.left   = (w * tmpl.photoLeft / 100) + 'px';
       nameEl.style.top = (h * tmpl.nameTop / 100) + 'px';
+      nameEl.style.fontSize = (tmpl.nameSize || 15) + 'px';
       idEl.style.top   = (h * tmpl.idTop   / 100) + 'px';
+      idEl.style.fontSize = (tmpl.idSize || 11) + 'px';
       resolve();
     };
     bg.src = tmpl.image;
@@ -2508,6 +2518,10 @@ async function downloadIdCard(format) {
     photoWrap.style.left = '';
     photoWrap.style.width = '';
     photoWrap.style.height = '';
+    document.getElementById('idcName').style.fontSize = '';
+    document.getElementById('idcName').style.top = '';
+    document.getElementById('idcId').style.fontSize = '';
+    document.getElementById('idcId').style.top = '';
   }
 
   // ── Populate BACK (reuses the real back template image as-is) ──
