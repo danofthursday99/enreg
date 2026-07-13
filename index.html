@@ -218,16 +218,52 @@
     .table-wrap tbody td:empty, .table-wrap tbody td[data-label=""] { display: none; }
   }
 
-  /* ── PROFILE MODAL ────────────────────────────────────────────────── */
-  .profile-photo-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 22px; }
-  .profile-photo { width: 114px; height: 114px; border-radius: 50%; object-fit: cover; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--border), var(--shadow-md); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 36px; color: var(--muted); }
-  .profile-details { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 22px; }
-  .profile-details .pd-item { font-size: 13px; color: var(--text-2); font-weight: 500; }
-  .profile-details .pd-label { font-size: 10px; color: var(--muted-lt); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; font-weight: 700; }
-  .profile-details .pd-full { grid-column: span 2; }
+  /* ── PROFILE MODAL (redesigned hero card) ───────────────────────────── */
+  #profileModal .modal { max-width: 420px; overflow: hidden; }
+  #profileModal .modal-body { padding: 0; }
+  .profile-hero { position: relative; padding: 26px 22px 50px; text-align: center;
+    background: linear-gradient(135deg, var(--hero-main, var(--accent)), var(--hero-dark, var(--accent-dk))); }
+  .profile-hero-close { position: absolute; top: 12px; left: 12px; width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(255,255,255,.16); border: none; color: #fff; font-size: 15px; cursor: pointer; line-height: 1; }
+  .profile-hero-close:hover { background: rgba(255,255,255,.28); }
+  .profile-hero-badges { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+  .profile-hero-badge { background: rgba(255,255,255,.2); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .profile-hero-badge.archived { background: rgba(0,0,0,.32); }
+  .profile-photo-wrap { position: relative; width: 92px; height: 92px; margin: 0 auto 12px; }
+  .profile-photo, .profile-photo-placeholder { width: 92px; height: 92px; border-radius: 50%; display: block; }
+  .profile-photo { object-fit: cover; background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,.35), var(--shadow-md); }
+  .profile-photo-placeholder { background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,.35), var(--shadow-md);
+    display: flex; align-items: center; justify-content: center; font-size: 27px; font-weight: 700;
+    font-family: 'DM Serif Display', serif; color: var(--hero-main, var(--accent)); }
+  .profile-photo-edit { position: absolute; bottom: 0; right: 0; width: 27px; height: 27px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--hero-main, var(--accent)); display: flex; align-items: center;
+    justify-content: center; cursor: pointer; font-size: 12px; box-shadow: var(--shadow-xs); }
+  .profile-hero-name { color: #fff; font-family: 'DM Serif Display', serif; font-size: 19px; font-weight: 400; margin: 0; line-height: 1.25; }
+  .profile-hero-id { color: rgba(255,255,255,.8); font-size: 12px; font-family: monospace; margin: 4px 0 0; }
+  .profile-glance { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px; margin-top: -30px; }
+  .profile-glance-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 8px; text-align: center; box-shadow: var(--shadow-xs); }
+  .profile-glance-card .g-val { font-size: 12.5px; font-weight: 700; color: var(--text); margin: 0 0 2px; }
+  .profile-glance-card .g-label { font-size: 10px; color: var(--muted-lt); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .profile-progress { padding: 16px 22px 4px; }
+  .profile-progress-labels { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  .profile-progress-track { height: 6px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .profile-progress-fill { height: 100%; border-radius: 4px; background: var(--hero-main, var(--accent)); transition: width .3s ease; }
+  .profile-details-wrap { padding: 6px 22px 4px; margin-top: 12px; }
+  .profile-details { display: flex; flex-direction: column; }
+  .pd-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid #F0F1F4; }
+  .pd-row:last-child { border-bottom: none; }
+  .pd-row .pd-label { color: var(--muted); display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .pd-row .pd-label .pd-icon { font-size: 13px; width: 15px; text-align: center; flex-shrink: 0; }
+  .pd-row .pd-val { font-weight: 600; color: var(--text-2); text-align: right; }
+  .pd-row .pd-val.tentative { color: var(--warn); font-style: italic; font-weight: 500; }
+  .profile-footer-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px 22px 22px; border-top: 1px solid var(--border); margin-top: 14px; }
+  .profile-footer-actions .btn { flex: 1 1 auto; }
   .modal-footer-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
 
   /* ── ID CARD TEMPLATE MANAGER MODAL ──────────────────────────────── */
+  .font-pick-wrap { position: relative; }
+  .font-pick-wrap input { font-style: normal; }
+  .font-pick-preview { margin-top: 6px; font-size: 15px; color: var(--text-2); padding: 6px 10px; border: 1px dashed var(--border-dk); border-radius: 6px; background: var(--bg); min-height: 20px; }
   .tmpl-preview-wrap { text-align: center; margin-bottom: 16px; }
   .tmpl-preview-wrap img { max-width: 150px; border-radius: 10px; box-shadow: var(--shadow-md); border: 1px solid var(--border); }
   .tmpl-pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-top: 4px; }
@@ -254,6 +290,7 @@
   #idCardTemplate .idc-photo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #EEF2F5; display: block; }
   #idCardTemplate .idc-photo-placeholder { width: 100%; height: 100%; border-radius: 50%; background: #EEF2F5; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #9CA3AF; }
   #idCardTemplate .idc-name { position: relative; z-index: 2; text-align: center; font-size: 15px; font-weight: 800; color: #111; margin-top: 14px; text-decoration: underline; padding: 0 10px; }
+  #idCardTemplate .idc-descriptor { position: relative; z-index: 2; text-align: center; font-size: 11px; font-weight: 600; color: #222; margin-top: 3px; padding: 0 10px; }
   #idCardTemplate .idc-id { position: relative; z-index: 2; text-align: center; font-size: 11px; font-weight: 700; color: #111; margin-top: 2px; }
 
   /* ── ID CARD — UPLOADED TEMPLATE MODE ────────────────────────────────
@@ -270,6 +307,7 @@
   #idCardTemplate.idc-imgmode .idc-bg-img { display: block; }
   #idCardTemplate.idc-imgmode .idc-photo-wrap { position: absolute; margin: 0; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
   #idCardTemplate.idc-imgmode .idc-name,
+  #idCardTemplate.idc-imgmode .idc-descriptor,
   #idCardTemplate.idc-imgmode .idc-id { position: absolute; left: 0; width: 100%; margin: 0; z-index: 2; text-align: center; }
 
   /* ── ID CARD BACK (offscreen) — reuses the real back template image ── */
@@ -315,29 +353,10 @@
 <!-- PROFILE MODAL -->
 <div class="modal-overlay" id="profileModal">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">Student Profile</span>
-      <button class="modal-close" onclick="closeProfileModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="profile-photo-wrap">
-        <div class="profile-photo" id="profilePhotoBox">👤</div>
-        <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('profilePhotoInput').click()" id="changePhotoBtn">Change Photo</button>
-      </div>
-      <div class="profile-details" id="profileDetails"></div>
-    </div>
-    <div class="modal-footer">
-      <div class="modal-footer-wrap">
-        <button class="btn btn-ghost btn-sm" onclick="closeProfileModal()">Close</button>
-        <button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>
-        <button class="btn btn-ghost btn-sm" onclick="openTemplateModal()">🖼 Card Template</button>
-        <button class="btn btn-success btn-sm" onclick="downloadIdCard('png')">⬇ ID Card (PNG)</button>
-        <button class="btn btn-success btn-sm" onclick="downloadIdCard('pdf')">⬇ ID Card (PDF)</button>
-      </div>
-    </div>
+    <div class="modal-body" id="profileModalBody"><!-- fully rendered by openProfile() --></div>
   </div>
 </div>
+<input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
 <!-- PHOTO ADJUST MODAL -->
 <div class="modal-overlay" id="photoAdjustModal">
   <div class="modal" style="max-width:420px;">
@@ -405,6 +424,24 @@
         </div>
         <span class="field-hint">Click "Preview" to check placement on screen before saving.</span>
       </div>
+
+      <div style="margin-top:18px;">
+        <label style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Origin School / Descriptor Line</label>
+        <span class="field-hint" style="display:block;margin-bottom:8px;">The line under the student's name (e.g. "Tokyo Gakkan High Student"). Works for camp AND regular students — set per student in Add/Edit Record.</span>
+        <div class="tmpl-pos-grid">
+          <div class="field"><label>Descriptor Top</label><input type="number" id="tmplDescTop" value="66"></div>
+          <div class="field"><label>Descriptor Font Size</label><input type="number" id="tmplDescSize" value="11"></div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label>Font Style</label>
+          <div class="font-pick-wrap">
+            <input type="text" id="tmplDescFont" list="googleFontsList" value="DM Sans" placeholder="Type to search Google Fonts…" autocomplete="off" oninput="updateFontPreview()">
+            <datalist id="googleFontsList"></datalist>
+          </div>
+          <div class="font-pick-preview" id="tmplDescFontPreview">Tokyo Gakkan High Student — DM Sans</div>
+          <span class="field-hint">Type any Google Font name (e.g. "Poppins", "Playfair Display", "Bebas Neue") — loads live as you type.</span>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="closeTemplateModal()">Cancel</button>
@@ -433,6 +470,7 @@
     <div class="idc-photo-placeholder">👤</div>
   </div>
   <div class="idc-name" id="idcName"></div>
+  <div class="idc-descriptor" id="idcDescriptor"></div>
   <div class="idc-id" id="idcId"></div>
 </div>
 
@@ -540,6 +578,11 @@
         <div class="field span-3">
           <label>Memo <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
           <input type="text" id="m_memo">
+        </div>
+        <div class="field span-3">
+          <label>Origin School / ID Card Descriptor <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+          <input type="text" id="m_originSchool" placeholder="e.g. Tokyo Gakkan High Student — shown on the ID card under the name">
+          <span class="field-hint">Printed as a line under the student's name on the ID card (front). Leave blank to omit.</span>
         </div>
       </div>
     </div>
@@ -668,6 +711,11 @@
           <div class="field span-3">
             <label>Memo <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
             <input type="text" id="memo" placeholder="e.g. Intensive — DX">
+          </div>
+          <div class="field span-3">
+            <label>Origin School / ID Card Descriptor <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
+            <input type="text" id="originSchool" placeholder="e.g. Tokyo Gakkan High Student — shown on the ID card under the name">
+            <span class="field-hint">Printed as a line under the student's name on the ID card (front). Leave blank to omit.</span>
           </div>
         </div>
         <div class="form-footer">
@@ -1317,7 +1365,7 @@ function toggleTypeField() {
 }
 
 function clearForm() {
-  ['studentId','fullName','country','course','type','dateStarted','dateEnded','dateGrad','birthDay','sex','memo','school'].forEach(id => {
+  ['studentId','fullName','country','course','type','dateStarted','dateEnded','dateGrad','birthDay','sex','memo','school','originSchool'].forEach(id => {
     document.getElementById(id).value = '';
     document.getElementById(id).classList.remove('error');
   });
@@ -1358,6 +1406,7 @@ async function saveRecord() {
     birthDay:    document.getElementById('birthDay').value,
     sex:         document.getElementById('sex').value,
     memo:        document.getElementById('memo').value.trim(),
+    originSchool: document.getElementById('originSchool').value.trim(),
     isCamp:      document.getElementById('isCamp').value === 'true',
     school:      document.getElementById('isCamp').value === 'true' ? toTitleCase(document.getElementById('school').value) : '',
   };
@@ -1845,21 +1894,37 @@ function goToPage(p) {
   renderTable(currentFilteredRecords);
 }
 
+// Strips accents (José -> Jose), collapses repeated/odd whitespace (including
+// the non-breaking spaces that sometimes ride along when names are pasted in
+// from Google Sheets), and lowercases — so search isn't thrown off by things
+// the person typing can't even see.
+function normalizeSearchText(s) {
+  return (s || '')
+    .toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function filterTable() {
-  const q         = document.getElementById('searchQuery').value.toLowerCase();
+  // Split into tokens and require each to appear somewhere in the name/ID,
+  // in ANY order — so searching "Cruz Juan" still finds "Juan Dela Cruz".
+  const qTokens   = normalizeSearchText(document.getElementById('searchQuery').value).split(' ').filter(Boolean);
   const country   = document.getElementById('searchCountry').value.toLowerCase();
   const course    = document.getElementById('searchCourse').value;
   const school    = document.getElementById('searchSchool').value;
   const campus    = document.getElementById('searchCampus').value;
   const archMode  = document.getElementById('searchArchived').value; // active | all | archived
-  const filtered = allRecords.filter(r =>
-    (!q       || (r.fullName||'').toLowerCase().includes(q) || (r.studentId||'').toLowerCase().includes(q)) &&
-    (!country || (r.country||'').toLowerCase().includes(country)) &&
-    (!course  || r.course === course) &&
-    (!school  || (school === '__none__' ? !r.isCamp || !r.school : (r.isCamp && r.school === school))) &&
-    (!campus  || r.campus === campus) &&
-    (archMode === 'all' || (archMode === 'archived' ? r.archived : !r.archived))
-  );
+  const filtered = allRecords.filter(r => {
+    const haystack = normalizeSearchText((r.fullName || '') + ' ' + (r.studentId || ''));
+    return qTokens.every(t => haystack.includes(t)) &&
+      (!country || (r.country||'').toLowerCase().includes(country)) &&
+      (!course  || r.course === course) &&
+      (!school  || (school === '__none__' ? !r.isCamp || !r.school : (r.isCamp && r.school === school))) &&
+      (!campus  || r.campus === campus) &&
+      (archMode === 'all' || (archMode === 'archived' ? r.archived : !r.archived));
+  });
   currentFilteredRecords = filtered;
   currentPage = 1;
   renderTable(filtered);
@@ -2004,7 +2069,7 @@ function exportXLSX(onlyFiltered) {
     toast(onlyFiltered ? 'No matching records to export.' : 'No records to export.', 'error');
     return;
   }
-  const headers = ['Student ID', 'Full Name', 'Campus', 'Country of Origin', 'Course', 'Type', 'Date Started', 'Date Ended', 'Date of Graduation', 'Birth Day', 'Sex', 'Week', 'Agency', 'Arrival Date', 'Flight No.', 'Arrival Time', 'Memo', 'Weeks', 'Is Camp', 'School', 'Last Edited By', 'Last Edited At', 'Archived'];
+  const headers = ['Student ID', 'Full Name', 'Campus', 'Country of Origin', 'Course', 'Type', 'Date Started', 'Date Ended', 'Date of Graduation', 'Birth Day', 'Sex', 'Week', 'Agency', 'Arrival Date', 'Flight No.', 'Arrival Time', 'Memo', 'Weeks', 'Is Camp', 'School', 'Last Edited By', 'Last Edited At', 'Archived', 'Origin School Descriptor'];
   const rows = source.map(r => [
     { t: 's', v: r.studentId   || '' },
     { t: 's', v: r.fullName    || '' },
@@ -2029,6 +2094,7 @@ function exportXLSX(onlyFiltered) {
     { t: 's', v: r.lastEditedBy || '' },
     { t: 's', v: r.lastEditedAt || '' },
     { t: 's', v: r.archived ? 'Yes' : 'No' },
+    { t: 's', v: r.originSchool || '' },
   ]);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws['!cols'] = [
@@ -2036,7 +2102,7 @@ function exportXLSX(onlyFiltered) {
     { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 18 },
     { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 18 },
     { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 20 },
-    { wch: 22 }, { wch: 18 }, { wch: 10 }
+    { wch: 22 }, { wch: 18 }, { wch: 10 }, { wch: 26 }
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Records');
@@ -2052,9 +2118,32 @@ let editingIndex = -1;
 // ── PROFILE MODAL ─────────────────────────────────────────────────────────────
 let profileRowNo = null;
 
-function fieldRow(label, value, full) {
+function pdRow(icon, label, value, tentative) {
   if (value == null || value === '') return '';
-  return `<div class="pd-item${full ? ' pd-full' : ''}"><div class="pd-label">${label}</div><div>${value}</div></div>`;
+  return `<div class="pd-row"><span class="pd-label"><span class="pd-icon">${icon}</span>${label}</span><span class="pd-val${tentative ? ' tentative' : ''}">${value}</span></div>`;
+}
+
+function initialsFor(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+}
+
+// Weeks elapsed vs. total, derived from Date Started / Date Ended, for the
+// profile progress bar. Returns null when either date is missing/invalid
+// (e.g. graduation is still "Tentative") since there's nothing to chart yet.
+function computeProfileProgress(r) {
+  const startISO = toInputDate(r.dateStarted);
+  const endISO   = toInputDate(r.dateEnded);
+  if (!startISO || !endISO) return null;
+  const start = new Date(startISO + 'T00:00:00');
+  const end   = new Date(endISO + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end <= start) return null;
+  const totalWeeks = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24 * 7)));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const rawElapsed = Math.floor((today - start) / (1000 * 60 * 60 * 24 * 7));
+  const elapsedWeeks = Math.max(0, Math.min(totalWeeks, rawElapsed));
+  return { elapsedWeeks, totalWeeks, pct: Math.round((elapsedWeeks / totalWeeks) * 100) };
 }
 
 function openProfile(rowNo) {
@@ -2062,36 +2151,77 @@ function openProfile(rowNo) {
   if (!r) { toast('Could not find that record. Try refreshing.', 'error'); return; }
   profileRowNo = rowNo;
 
-  const photoBox = document.getElementById('profilePhotoBox');
-  if (r.photo) {
-    photoBox.innerHTML = `<img class="profile-photo" src="${r.photo}" alt="">`;
-  } else {
-    photoBox.outerHTML = '<div class="profile-photo" id="profilePhotoBox">👤</div>';
-  }
+  const colorKey = cardColorFor(r);
+  const palette  = CARD_COLOR_PALETTE[colorKey] || CARD_COLOR_PALETTE.blue;
 
-  document.getElementById('profileDetails').innerHTML = [
-    fieldRow('Student ID', r.studentId, true),
-    fieldRow('Full Name', r.fullName, true),
-    fieldRow('Country', r.country),
-    fieldRow('Sex', r.sex),
-    fieldRow('Course', r.course),
-    fieldRow('Type', r.type),
-    fieldRow('Campus', r.campus),
-    fieldRow('School', r.isCamp ? r.school : ''),
-    fieldRow('Date Started', r.dateStarted),
-    fieldRow('Date Ended', r.dateEnded),
-    fieldRow('Graduation', r.dateGrad),
-    fieldRow('Birth Day', r.birthDay),
-    fieldRow('Weeks', r.weeks),
-    fieldRow('Agency', r.agency),
-    fieldRow('Arrival Date', r.arrivalDate),
-    fieldRow('Flight No.', r.flightNo),
-    fieldRow('Arrival Time', r.arrivalTime),
-    fieldRow('Memo', r.memo, true),
-    fieldRow('Last Edited By', r.lastEditedBy),
-    fieldRow('Last Edited At', r.lastEditedAt),
-    r.archived ? fieldRow('Status', '🗄 Archived') : '',
+  const photoHtml = r.photo
+    ? `<img class="profile-photo" id="profilePhotoBox" src="${r.photo}" alt="">`
+    : `<div class="profile-photo-placeholder" id="profilePhotoBox">${initialsFor(r.fullName)}</div>`;
+
+  const badges = [
+    `<span class="profile-hero-badge">${r.isCamp ? 'Camp' : 'Regular'}</span>`,
+    r.archived
+      ? `<span class="profile-hero-badge archived">Archived</span>`
+      : `<span class="profile-hero-badge">Active</span>`,
   ].join('');
+
+  const glanceHtml = `
+    <div class="profile-glance-card">
+      <div class="g-val">${r.country || '—'}</div>
+      <div class="g-label">Country</div>
+    </div>
+    <div class="profile-glance-card">
+      <div class="g-val">${[r.course, r.type].filter(v => v && v !== 'N/A').join(' · ') || r.course || '—'}</div>
+      <div class="g-label">Course</div>
+    </div>`;
+
+  const progress = computeProfileProgress(r);
+  const progressHtml = progress ? `
+    <div class="profile-progress">
+      <div class="profile-progress-labels"><span>Week ${progress.elapsedWeeks}</span><span>of ${progress.totalWeeks}</span></div>
+      <div class="profile-progress-track"><div class="profile-progress-fill" style="width:${progress.pct}%;"></div></div>
+    </div>` : '';
+
+  const detailRows = [
+    pdRow('🆔', 'Student ID', r.studentId),
+    pdRow('⚧', 'Sex', r.sex),
+    pdRow('🏫', 'Campus', r.campus),
+    pdRow('🏯', 'School', r.isCamp ? r.school : ''),
+    pdRow('📅', 'Started', r.dateStarted),
+    pdRow('📅', 'Ended', r.dateEnded || 'Tentative', !r.dateEnded),
+    pdRow('🎓', 'Graduation', r.dateGrad || 'Tentative', !r.dateGrad),
+    pdRow('🎂', 'Birth Day', r.birthDay),
+    !progress ? pdRow('⏳', 'Weeks', r.weeks) : '',
+    pdRow('🏢', 'Agency', r.agency),
+    pdRow('✈️', 'Arrival Date', r.arrivalDate),
+    pdRow('🛫', 'Flight No.', r.flightNo),
+    pdRow('🕐', 'Arrival Time', r.arrivalTime),
+    pdRow('📝', 'Memo', r.memo),
+    pdRow('🪪', 'ID Card Descriptor', r.originSchool),
+    pdRow('✒️', 'Last Edited', r.lastEditedBy ? `${r.lastEditedBy}${r.lastEditedAt ? ' · ' + r.lastEditedAt : ''}` : ''),
+  ].join('');
+
+  document.getElementById('profileModalBody').innerHTML = `
+    <div class="profile-hero" style="--hero-main:${palette.main}; --hero-dark:${palette.dark};">
+      <button class="profile-hero-close" onclick="closeProfileModal()">✕</button>
+      <div class="profile-hero-badges">${badges}</div>
+      <div class="profile-photo-wrap">
+        ${photoHtml}
+        <button class="profile-photo-edit" title="Change photo" onclick="document.getElementById('profilePhotoInput').click()">✎</button>
+      </div>
+      <p class="profile-hero-name">${r.fullName || '—'}</p>
+      <p class="profile-hero-id">${r.studentId || '—'}</p>
+    </div>
+    <div class="profile-glance">${glanceHtml}</div>
+    ${progressHtml}
+    <div class="profile-details-wrap"><div class="profile-details">${detailRows}</div></div>
+    <div class="profile-footer-actions">
+      <button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>
+      <button class="btn btn-ghost btn-sm" onclick="openTemplateModal()">🖼 Template</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadIdCard('pdf')">⬇ PDF</button>
+      <button class="btn btn-primary btn-sm" onclick="downloadIdCard('png')">⬇ Download ID</button>
+    </div>
+  `;
 
   document.getElementById('profileModal').classList.add('open');
 }
@@ -2307,6 +2437,67 @@ function cardColorFor(r) {
 const CARD_TEMPLATE_KEY = 'enrollmentRegistry_cardTemplates';
 const CAMPUS_LIST = ['CWA-Mabolo', 'CWA-USPF', 'CWA-IAU'];
 
+// ── GOOGLE FONTS PICKER (for the ID card descriptor line) ──────────────────
+// Curated list spanning sans/serif/display/handwriting/monospace so there's
+// a wide, searchable set without needing a live Google Fonts API key.
+const GOOGLE_FONTS = [
+  'DM Sans','DM Serif Display','Roboto','Open Sans','Lato','Montserrat','Poppins','Inter',
+  'Nunito','Nunito Sans','Raleway','Rubik','Work Sans','Mulish','Karla','Manrope','Barlow',
+  'Source Sans 3','Source Serif 4','PT Sans','PT Serif','Noto Sans','Noto Serif','Merriweather',
+  'Playfair Display','Playfair Display SC','Lora','Libre Baskerville','Libre Franklin','Crimson Text',
+  'Cormorant Garamond','EB Garamond','Bitter','Zilla Slab','Josefin Sans','Josefin Slab','Quicksand',
+  'Comfortaa','Baloo 2','Fredoka','Varela Round','Nunito','Ubuntu','Cabin','Oswald','Bebas Neue',
+  'Anton','Archivo','Archivo Black','Archivo Narrow','Teko','Staatliches','Righteous','Alfa Slab One',
+  'Passion One','Fjalla One','Pathway Gothic One','Abril Fatface','Yeseva One','Prata','Cinzel',
+  'Cinzel Decorative','Marcellus','Spectral','Vollkorn','Domine','Alegreya','Alegreya Sans',
+  'Frank Ruhl Libre','IBM Plex Sans','IBM Plex Serif','IBM Plex Mono','Space Grotesk','Space Mono',
+  'JetBrains Mono','Roboto Mono','Courier Prime','Inconsolata','Fira Sans','Fira Code','Cairo',
+  'Tajawal','Amiri','Great Vibes','Dancing Script','Pacifico','Sacramento','Satisfy','Caveat',
+  'Kalam','Indie Flower','Shadows Into Light','Permanent Marker','Amatic SC','Patrick Hand',
+  'Handlee','Homemade Apple','Courgette','Lobster','Lobster Two','Pattaya','Bangers','Chewy',
+  'Baloo Bhai 2','Concert One','Sniglet','Titan One','Luckiest Guy','Boogaloo','Fredericka the Great',
+  'Kanit','Prompt','Sarabun','Mitr','Chakra Petch','Noto Sans JP','Noto Serif JP','M PLUS Rounded 1c',
+  'Zen Kaku Gothic New','Zen Maru Gothic','Sawarabi Mincho','Sawarabi Gothic','Hachi Maru Pop',
+  'Yuji Syuku','Shippori Mincho','Klee One','Dela Gothic One','RocknRoll One','Reggae One',
+  'Kosugi Maru','Sriracha','Yellowtail','Great Vibes','Playball','Italiana','Cormorant','Cormorant SC',
+  'Bodoni Moda','Newsreader','Petrona','Sora','Outfit','Plus Jakarta Sans','Urbanist','Figtree',
+  'Lexend','Lexend Deca','Epilogue','Red Hat Display','Syne','Unbounded','Big Shoulders Display',
+  'Bricolage Grotesque','Instrument Sans','Instrument Serif','Bricolage Grotesque','Onest'
+];
+
+// Keeps track of which Google Font <link> tags we've already injected so we
+// don't spam duplicate <link> tags every time a card is rendered.
+const _loadedGoogleFonts = new Set();
+async function ensureGoogleFont(fontName) {
+  const name = (fontName || '').trim();
+  if (!name || name.toLowerCase() === 'dm sans') return; // already loaded by the page itself
+  if (!_loadedGoogleFonts.has(name)) {
+    _loadedGoogleFonts.add(name);
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name).replace(/%20/g, '+')}:wght@400;700&display=swap`;
+    document.head.appendChild(link);
+  }
+  // Give the browser a moment to actually fetch/parse the font before we
+  // read it back — avoids a flash-of-fallback-font on the very first render
+  // and, more importantly, avoids html2canvas snapshotting before it's ready.
+  try {
+    await document.fonts.load(`700 16px "${name}"`);
+    await document.fonts.load(`400 16px "${name}"`);
+  } catch (e) { /* font API not available / font failed — fall back silently */ }
+}
+
+function updateFontPreview() {
+  const name = document.getElementById('tmplDescFont').value.trim() || 'DM Sans';
+  const prev = document.getElementById('tmplDescFontPreview');
+  if (!prev) return;
+  ensureGoogleFont(name).then(() => {
+    prev.style.fontFamily = `'${name}', sans-serif`;
+    prev.textContent = `Tokyo Gakkan High Student — ${name}`;
+  });
+}
+
+
 function loadCardTemplates() {
   try { return JSON.parse(localStorage.getItem(CARD_TEMPLATE_KEY) || '{}'); }
   catch(e) { return {}; }
@@ -2338,6 +2529,8 @@ function closeTemplateModal() {
 document.addEventListener('DOMContentLoaded', () => {
   const tOverlay = document.getElementById('templateModal');
   if (tOverlay) tOverlay.addEventListener('click', function(e) { if (e.target === this) closeTemplateModal(); });
+  const fontList = document.getElementById('googleFontsList');
+  if (fontList) fontList.innerHTML = GOOGLE_FONTS.map(f => `<option value="${f}">`).join('');
 });
 
 function loadTemplateIntoForm() {
@@ -2355,6 +2548,10 @@ function loadTemplateIntoForm() {
     document.getElementById('tmplNameSize').value  = t.nameSize  != null ? t.nameSize  : 15;
     document.getElementById('tmplIdTop').value     = t.idTop;
     document.getElementById('tmplIdSize').value    = t.idSize    != null ? t.idSize    : 11;
+    document.getElementById('tmplDescTop').value   = t.descriptorTop  != null ? t.descriptorTop  : 66;
+    document.getElementById('tmplDescSize').value  = t.descriptorSize != null ? t.descriptorSize : 11;
+    document.getElementById('tmplDescFont').value  = t.descriptorFont || 'DM Sans';
+    updateFontPreview();
   } else {
     wrap.style.display = 'none';
     document.getElementById('tmplPhotoTop').value  = 24;
@@ -2364,6 +2561,10 @@ function loadTemplateIntoForm() {
     document.getElementById('tmplNameSize').value  = 15;
     document.getElementById('tmplIdTop').value     = 68;
     document.getElementById('tmplIdSize').value    = 11;
+    document.getElementById('tmplDescTop').value   = 66;
+    document.getElementById('tmplDescSize').value  = 11;
+    document.getElementById('tmplDescFont').value  = 'DM Sans';
+    updateFontPreview();
   }
 }
 
@@ -2404,6 +2605,9 @@ function readTemplateFormValues() {
     nameSize:  parseFloat(document.getElementById('tmplNameSize').value)  || 15,
     idTop:     parseFloat(document.getElementById('tmplIdTop').value)     || 68,
     idSize:    parseFloat(document.getElementById('tmplIdSize').value)    || 11,
+    descriptorTop:  parseFloat(document.getElementById('tmplDescTop').value)  || 66,
+    descriptorSize: parseFloat(document.getElementById('tmplDescSize').value) || 11,
+    descriptorFont: document.getElementById('tmplDescFont').value.trim() || 'DM Sans',
   };
 }
 
@@ -2428,31 +2632,40 @@ function renderCardTemplate(tmpl, data) {
     const bg = document.getElementById('idcBgImg');
     const photoWrap = document.getElementById('idcPhotoWrap');
     const nameEl = document.getElementById('idcName');
+    const descEl = document.getElementById('idcDescriptor');
     const idEl = document.getElementById('idcId');
 
     nameEl.textContent = data.fullName || '—';
     idEl.textContent   = data.studentId || '—';
+    descEl.textContent = data.originSchool || '';
+    descEl.style.display = data.originSchool ? '' : 'none';
     photoWrap.innerHTML = data.photo
       ? `<img class="idc-photo" src="${data.photo}" alt="">`
       : `<div class="idc-photo-placeholder">👤</div>`;
 
-    bg.onload = () => {
-      const w = 274;
-      const h = w * (bg.naturalHeight / bg.naturalWidth);
-      front.style.width  = w + 'px';
-      front.style.height = h + 'px';
-      const diam = w * (tmpl.photoSize / 100);
-      photoWrap.style.width  = diam + 'px';
-      photoWrap.style.height = diam + 'px';
-      photoWrap.style.top    = (h * tmpl.photoTop  / 100) + 'px';
-      photoWrap.style.left   = (w * tmpl.photoLeft / 100) + 'px';
-      nameEl.style.top = (h * tmpl.nameTop / 100) + 'px';
-      nameEl.style.fontSize = (tmpl.nameSize || 15) + 'px';
-      idEl.style.top   = (h * tmpl.idTop   / 100) + 'px';
-      idEl.style.fontSize = (tmpl.idSize || 11) + 'px';
-      resolve();
-    };
-    bg.src = tmpl.image;
+    const descFont = tmpl.descriptorFont || 'DM Sans';
+    ensureGoogleFont(descFont).then(() => {
+      bg.onload = () => {
+        const w = 274;
+        const h = w * (bg.naturalHeight / bg.naturalWidth);
+        front.style.width  = w + 'px';
+        front.style.height = h + 'px';
+        const diam = w * (tmpl.photoSize / 100);
+        photoWrap.style.width  = diam + 'px';
+        photoWrap.style.height = diam + 'px';
+        photoWrap.style.top    = (h * tmpl.photoTop  / 100) + 'px';
+        photoWrap.style.left   = (w * tmpl.photoLeft / 100) + 'px';
+        nameEl.style.top = (h * tmpl.nameTop / 100) + 'px';
+        nameEl.style.fontSize = (tmpl.nameSize || 15) + 'px';
+        descEl.style.top = (h * (tmpl.descriptorTop != null ? tmpl.descriptorTop : 66) / 100) + 'px';
+        descEl.style.fontSize = (tmpl.descriptorSize || 11) + 'px';
+        descEl.style.fontFamily = `'${descFont}', sans-serif`;
+        idEl.style.top   = (h * tmpl.idTop   / 100) + 'px';
+        idEl.style.fontSize = (tmpl.idSize || 11) + 'px';
+        resolve();
+      };
+      bg.src = tmpl.image;
+    });
   });
 }
 
@@ -2469,6 +2682,7 @@ async function previewTemplate() {
     fullName: sample.fullName || 'Juan Dela Cruz',
     studentId: sample.studentId || 'CU-J00000',
     photo: sample.photo || '',
+    originSchool: sample.originSchool || 'Tokyo Gakkan High Student',
   });
   const front = document.getElementById('idCardTemplate');
   front.style.top = '20px';
@@ -2511,6 +2725,15 @@ async function renderCardFrontFor(r) {
       : (r.campus || 'CWA-USPF') + '<br>ESL Center';
     document.getElementById('idcName').textContent = r.fullName || '—';
     document.getElementById('idcId').textContent   = r.studentId || '—';
+
+    // Origin-school / descriptor line — shown for camp AND regular students
+    // alike whenever the field is filled in on the student's record.
+    const descEl = document.getElementById('idcDescriptor');
+    descEl.textContent = r.originSchool || '';
+    descEl.style.display = r.originSchool ? '' : 'none';
+    descEl.style.fontFamily = '';
+    descEl.style.fontSize = '';
+    descEl.style.top = '';
 
     const photoWrap = document.getElementById('idcPhotoWrap');
     photoWrap.innerHTML = r.photo
@@ -2629,6 +2852,7 @@ function openEditByRow(rowNo) {
   document.getElementById('m_birthDay').value    = toInputDate(r.birthDay);
   document.getElementById('m_sex').value         = r.sex         || '';
   document.getElementById('m_memo').value        = r.memo        || '';
+  document.getElementById('m_originSchool').value = r.originSchool || '';
   setCampToggle('m_', r.isCamp || false);
   document.getElementById('m_school').value      = r.school      || '';
   document.getElementById('m_schoolDateHint').textContent = '';
@@ -2664,6 +2888,7 @@ async function saveEdit() {
     birthDay:    document.getElementById('m_birthDay').value,
     sex:         document.getElementById('m_sex').value,
     memo:        document.getElementById('m_memo').value.trim(),
+    originSchool: document.getElementById('m_originSchool').value.trim(),
     isCamp:      document.getElementById('m_isCamp').value === 'true',
     school:      document.getElementById('m_isCamp').value === 'true' ? toTitleCase(document.getElementById('m_school').value) : '',
   };
