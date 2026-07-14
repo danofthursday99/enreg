@@ -218,6 +218,12 @@
     .table-wrap tbody td:empty, .table-wrap tbody td[data-label=""] { display: none; }
   }
 
+  /* ── ROLE-BASED PERMISSIONS (encoder = add/view only, no edit/archive/bulk) */
+  .role-encoder #bulkBar { display: none !important; }
+  .role-encoder #recordsTable th:nth-child(1),
+  .role-encoder #recordsTable td:nth-child(1) { display: none; }
+  .role-encoder #recordsTable tr { cursor: default; }
+
   /* ── PROFILE MODAL (redesigned hero card) ───────────────────────────── */
   #profileModal .modal { max-width: 420px; overflow-y: auto; overflow-x: hidden; }
   #profileModal .modal-body { padding: 0; }
@@ -896,6 +902,24 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxq7O4an7fkam6XbhaYMoGZ
 const GOOGLE_CLIENT_ID = '432071525789-eo7tb1b1mlal146lol24nd6il1ccpqjk.apps.googleusercontent.com';
 let currentIdToken = null; // set after successful Google Sign-In; sent with every backend request
 
+// ── ROLE-BASED PERMISSIONS ──────────────────────────────────────────────────
+// 'admin'   → full access (add, edit, archive, bulk actions)
+// 'encoder' → can register/add new students and view the list, but cannot
+//             edit, archive, or use bulk actions. Defaults to 'admin' until
+//             the backend starts returning a role (keeps existing behavior
+//             unchanged for everyone until the Sheet/GAS side is wired up).
+let currentUserRole = 'admin';
+function isAdmin() { return currentUserRole === 'admin'; }
+
+// Applies (or removes) the visual/interaction restrictions for non-admin
+// roles. Note: this is a UI convenience only — the real security boundary
+// must be enforced on the GAS backend (reject edit/archive/bulkUpdate
+// requests server-side for non-admin users), since anyone can call the API
+// directly and bypass anything done here.
+function applyRolePermissions() {
+  document.body.classList.toggle('role-encoder', !isAdmin());
+}
+
 // Appends idToken as a query param to a GET url
 function withAuth(url) {
   const sep = url.includes('?') ? '&' : '?';
@@ -908,6 +932,7 @@ function withAuthPayload(payload) {
 // Central handler for backend auth failures — kicks the user back to the login screen
 function handleAuthError() {
   currentIdToken = null;
+  currentUserRole = 'admin';
   document.getElementById('appShell').classList.remove('ready');
   document.getElementById('loginOverlay').classList.remove('hidden');
   showLoginMsg('Your session expired or is not authorized. Please sign in again.', 'error');
@@ -939,6 +964,8 @@ async function handleCredentialResponse(response) {
     if (data.status === 'ok') {
       verified = true;
       allRecords = data.records || [];
+      currentUserRole = data.role || 'admin';
+      applyRolePermissions();
     } else if (data.code === 401) {
       handleAuthError();
     } else {
@@ -964,6 +991,7 @@ async function handleCredentialResponse(response) {
 
 function handleLogout() {
   currentIdToken = null;
+  currentUserRole = 'admin';
   try { google.accounts.id.disableAutoSelect(); } catch(e) {}
   document.getElementById('appShell').classList.remove('ready');
   document.getElementById('loginOverlay').classList.remove('hidden');
@@ -1848,10 +1876,11 @@ function renderTable(rows) {
     const checked   = selectedRows.has(r.rowNo) ? 'checked' : '';
     const rowClass  = (selectedRows.has(r.rowNo) ? 'row-selected ' : '') + (r.archived ? 'archived-row' : '');
     const lastEdit  = r.lastEditedBy ? `<span style="font-size:11px;">${r.lastEditedBy}${r.lastEditedAt ? '<br><span class="td-muted" style="font-size:10px;">'+r.lastEditedAt+'</span>' : ''}</span>` : '<span class="td-muted">—</span>';
-    const archiveBtn = r.archived
+    const archiveBtn = !isAdmin() ? '' : (r.archived
       ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, false)" style="padding:0 8px;">Restore</button>`
-      : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, true)" style="padding:0 8px;">Archive</button>`;
-    return `<tr onclick="openEditByRow(${r.rowNo})" style="background:${bgColor};" class="${rowClass}">
+      : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, true)" style="padding:0 8px;">Archive</button>`);
+    const rowClickHandler = isAdmin() ? `openEditByRow(${r.rowNo})` : `openProfile(${r.rowNo})`;
+    return `<tr onclick="${rowClickHandler}" style="background:${bgColor};" class="${rowClass}">
       <td onclick="event.stopPropagation();" data-label=""><input type="checkbox" class="row-checkbox" ${checked} onchange="toggleRowSelect(${r.rowNo}, this)"></td>
       <td class="td-muted" style="text-align:center;" data-label="">${start + i + 1}</td>
       <td class="td-id" data-label="ID">${r.studentId || '—'}</td>
@@ -1868,7 +1897,7 @@ function renderTable(rows) {
       <td data-label="Last Edited">${lastEdit}</td>
       <td onclick="event.stopPropagation();" data-label="" style="white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openProfile(${r.rowNo})" style="padding:0 8px;">Profile</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 8px;">Edit</button>
+        ${isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 8px;">Edit</button>` : ''}
         ${archiveBtn}
       </td>
     </tr>`;
@@ -2157,6 +2186,9 @@ function openProfile(rowNo) {
   const photoHtml = r.photo
     ? `<img class="profile-photo" id="profilePhotoBox" src="${r.photo}" alt="">`
     : `<div class="profile-photo-placeholder" id="profilePhotoBox">${initialsFor(r.fullName)}</div>`;
+  const photoEditBtn = isAdmin()
+    ? `<button class="profile-photo-edit" title="Change photo" onclick="document.getElementById('profilePhotoInput').click()">✎</button>`
+    : '';
 
   const badges = [
     `<span class="profile-hero-badge">${r.isCamp ? 'Camp' : 'Regular'}</span>`,
@@ -2207,7 +2239,7 @@ function openProfile(rowNo) {
       <div class="profile-hero-badges">${badges}</div>
       <div class="profile-photo-wrap">
         ${photoHtml}
-        <button class="profile-photo-edit" title="Change photo" onclick="document.getElementById('profilePhotoInput').click()">✎</button>
+        ${photoEditBtn}
       </div>
       <p class="profile-hero-name">${r.fullName || '—'}</p>
       <p class="profile-hero-id">${r.studentId || '—'}</p>
@@ -2216,7 +2248,7 @@ function openProfile(rowNo) {
     ${progressHtml}
     <div class="profile-details-wrap"><div class="profile-details">${detailRows}</div></div>
     <div class="profile-footer-actions">
-      <button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>
+      ${isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>` : ''}
       <button class="btn btn-ghost btn-sm" onclick="openTemplateModal()">🖼 Template</button>
       <button class="btn btn-ghost btn-sm" onclick="downloadIdCard('pdf')">⬇ PDF</button>
       <button class="btn btn-primary btn-sm" onclick="downloadIdCard('png')">⬇ Download ID</button>
