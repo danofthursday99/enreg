@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Hub</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #F3F4F7;
+    --surface:   #FFFFFF;
+    --border:    #E4E7EC;
+    --border-dk: #D3D8E0;
+    --text:      #14171F;
+    --text-2:    #333844;
+    --muted:     #667085;
+    --muted-lt:  #98A2B3;
+    --accent:    #2563EB;
+    --accent-dk: #1D4ED8;
+    --accent-lt: #EEF3FF;
+    --ink:       #0F172A;
+    --ink-lt:    #1E293B;
+    --success:   #059669;
+    --success-lt:#ECFDF5;
+    --danger:    #DC2626;
+    --danger-lt: #FEF2F2;
+    --warn:      #D97706;
+    --warn-lt:   #FFFBEB;
+    --radius:    10px;
+    --radius-lg: 16px;
+    --shadow-xs: 0 1px 2px rgba(16,24,40,.05);
+    --shadow:    0 1px 2px rgba(16,24,40,.06), 0 4px 14px rgba(16,24,40,.05);
+    --shadow-md: 0 4px 10px rgba(16,24,40,.06), 0 10px 26px rgba(16,24,40,.07);
+    --shadow-lg: 0 12px 20px -6px rgba(16,24,40,.1), 0 24px 48px -12px rgba(16,24,40,.16);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+  button, input, textarea, select { font-family: inherit; }
+  .hidden { display: none !important; }
+
+  /* ── LANDING / LOGIN ─────────────────────────────────────────────────── */
+  #loginOverlay {
+    position: fixed; inset: 0; z-index: 500; overflow-y: auto;
+    background:
+      radial-gradient(1100px 480px at 82% -8%, rgba(37,99,235,.10), transparent 60%),
+      radial-gradient(700px 420px at -6% 108%, rgba(217,119,6,.08), transparent 55%),
+      var(--bg);
+  }
+  .landing-wrap { max-width: 1080px; margin: 0 auto; padding: 56px 28px 40px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; justify-content: center; gap: 46px; }
+  .landing-logo { display: flex; align-items: center; gap: 10px; position: absolute; top: 28px; left: 32px; }
+  .landing-logo-mark { width: 32px; height: 32px; background: linear-gradient(155deg, var(--accent) 0%, var(--accent-dk) 100%); border-radius: 9px; display: flex; align-items: center; justify-content: center; color: white; font-size: 15px; font-weight: 600; font-family: 'DM Serif Display', serif; box-shadow: 0 2px 6px rgba(37,99,235,.35); }
+  .landing-logo-text { font-size: 14.5px; font-weight: 700; color: var(--ink); letter-spacing: -.2px; }
+
+  .landing-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 64px; align-items: center; width: 100%; }
+  @media (max-width: 860px) { .landing-grid { grid-template-columns: 1fr; gap: 40px; text-align: center; } }
+
+  .landing-eyebrow { display: inline-flex; align-items: center; gap: 7px; background: var(--accent-lt); color: var(--accent-dk); font-size: 11.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; padding: 6px 13px; border-radius: 20px; margin-bottom: 18px; }
+  .landing-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .landing-title { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 46px; line-height: 1.12; letter-spacing: -0.8px; color: var(--ink); margin-bottom: 18px; }
+  .landing-title em { font-style: normal; color: var(--accent); }
+  .landing-sub { font-size: 15.5px; color: var(--muted); line-height: 1.65; max-width: 460px; margin-bottom: 30px; }
+  @media (max-width: 860px) { .landing-sub { margin-left: auto; margin-right: auto; } }
+
+  .landing-features { display: flex; flex-direction: column; gap: 14px; margin-bottom: 34px; }
+  @media (max-width: 860px) { .landing-features { align-items: center; } }
+  .lf-item { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--text-2); font-weight: 500; }
+  .lf-icon { width: 30px; height: 30px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: var(--shadow-xs); flex-shrink: 0; }
+
+  #gsiButtonWrap { display: inline-block; }
+  .login-msg { font-size: 12.5px; margin-top: 14px; min-height: 18px; font-weight: 600; }
+  .login-msg.info    { color: var(--muted); }
+  .login-msg.error   { color: var(--danger); }
+  .login-msg.success { color: var(--success); }
+
+  /* Signature: a fanned stack of ID-card shapes, echoing the actual student
+     ID cards this system issues — not a generic gradient blob. */
+  .id-stack { position: relative; width: 100%; max-width: 380px; aspect-ratio: 1/1.05; margin: 0 auto; }
+  .id-card { position: absolute; width: 260px; height: 168px; left: 50%; top: 50%; border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid rgba(255,255,255,.5); }
+  .id-card-1 { background: linear-gradient(150deg, #EEF3FF 0%, #DCE6FF 100%); transform: translate(-72%, -62%) rotate(-13deg); z-index: 1; }
+  .id-card-2 { background: linear-gradient(150deg, #FFFBEB 0%, #FDE9C4 100%); transform: translate(-42%, -46%) rotate(6deg); z-index: 2; }
+  .id-card-3 { background: linear-gradient(150deg, #FFFFFF 0%, #F3F4F7 100%); transform: translate(-50%, -50%) rotate(-2deg); z-index: 3; }
+  .id-card-inner { padding: 18px; display: flex; flex-direction: column; height: 100%; }
+  .id-card-top { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .id-card-dot { width: 30px; height: 30px; border-radius: 50%; background: rgba(15,23,42,.12); }
+  .id-card-lines { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+  .id-card-line { height: 6px; border-radius: 3px; background: rgba(15,23,42,.14); }
+  .id-card-line.w60 { width: 60%; }
+  .id-card-line.w40 { width: 40%; }
+  .id-card-line.w80 { width: 80%; }
+  .id-card-bar { height: 8px; border-radius: 4px; background: rgba(37,99,235,.28); width: 45%; margin-top: auto; }
+  .id-card-3 .id-card-bar { background: rgba(217,119,6,.32); }
+
+  /* ── APP SHELL ────────────────────────────────────────────────────────── */
+  #appShell { display: none; }
+  #appShell.ready { display: block; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 0 rgba(16,24,40,.03); }
+  .topbar-logo { display: flex; align-items: center; gap: 10px; }
+  .topbar-mark { width: 30px; height: 30px; background: linear-gradient(155deg, var(--accent) 0%, var(--accent-dk) 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600; font-family: 'DM Serif Display', serif; }
+  .topbar-title { font-size: 14.5px; font-weight: 700; color: var(--ink); letter-spacing: -.2px; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+  .notif-btn { position: relative; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: background .15s; }
+  .notif-btn:hover { background: var(--accent-lt); }
+  .notif-badge { position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--danger); color: white; font-size: 9.5px; font-weight: 700; display: none; align-items: center; justify-content: center; border: 2px solid var(--surface); }
+  .notif-wrap { position: relative; }
+  .notif-dropdown { position: absolute; top: 46px; right: 0; width: 320px; max-height: 380px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: none; z-index: 200; }
+  .notif-dropdown.open { display: block; }
+  .notif-dropdown-head { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-text { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+  .notif-time { font-size: 11px; color: var(--muted-lt); margin-top: 3px; }
+
+  .user-chip { display: flex; align-items: center; gap: 9px; }
+  .user-chip img { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); object-fit: cover; }
+  .user-chip-name { font-size: 12.5px; font-weight: 600; color: var(--text-2); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .signout-btn { border: none; background: transparent; color: var(--muted); font-size: 11.5px; font-weight: 600; cursor: pointer; padding: 6px 4px; }
+  .signout-btn:hover { color: var(--danger); }
+
+  .page { max-width: 980px; margin: 0 auto; padding: 26px 20px 60px; }
+
+  /* Profile header card */
+  .profile-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 22px; }
+  .ph-cover { height: 168px; position: relative; background: linear-gradient(120deg, var(--accent-lt) 0%, #FFFBEB 100%); background-size: cover; background-position: center; }
+  .ph-cover-edit { position: absolute; bottom: 10px; right: 12px; background: rgba(15,23,42,.6); color: white; border: none; border-radius: 8px; padding: 7px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer; backdrop-filter: blur(3px); }
+  .ph-cover-edit:hover { background: rgba(15,23,42,.75); }
+  .ph-body { padding: 0 26px 22px; position: relative; }
+  .ph-avatar-wrap { position: relative; width: 96px; margin-top: -48px; margin-bottom: 12px; }
+  .ph-avatar { width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--surface); object-fit: cover; background: var(--accent-lt); box-shadow: var(--shadow); display: block; }
+  .ph-avatar-placeholder { width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--surface); background: linear-gradient(150deg, var(--accent) 0%, var(--accent-dk) 100%); color: white; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 30px; box-shadow: var(--shadow); }
+  .ph-avatar-edit { position: absolute; bottom: 2px; right: -2px; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: white; border: 2px solid var(--surface); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .ph-avatar-edit:hover { background: var(--accent-dk); }
+  .ph-name { font-family: 'DM Serif Display', serif; font-size: 23px; font-weight: 400; color: var(--ink); letter-spacing: -.3px; }
+  .ph-badges { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 12px; }
+  .ph-badge { font-size: 11.5px; font-weight: 600; padding: 4px 11px; border-radius: 20px; background: var(--accent-lt); color: var(--accent-dk); }
+  .ph-badge.warn { background: var(--warn-lt); color: var(--warn); }
+  .ph-bio { font-size: 13px; color: var(--text-2); line-height: 1.6; max-width: 560px; }
+  .ph-bio.muted { color: var(--muted-lt); font-style: italic; }
+  .ph-staff-note { font-size: 12.5px; color: var(--muted); background: var(--bg); border: 1px dashed var(--border-dk); border-radius: var(--radius); padding: 12px 14px; margin-top: 8px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--border); padding: 3px; border-radius: 13px; width: fit-content; }
+  .tab { padding: 9px 20px; border: none; background: transparent; border-radius: var(--radius); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .18s; }
+  .tab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-xs); }
+  .tab-panel { display: none; animation: fadeUp .2s ease; }
+  .tab-panel.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .card-header { padding: 18px 24px 15px; border-bottom: 1px solid var(--border); }
+  .card-title { font-family: 'DM Serif Display', serif; font-size: 17.5px; font-weight: 400; color: var(--ink); }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .card-body { padding: 22px 24px; }
+
+  /* Profile edit form */
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field label { font-size: 11.5px; font-weight: 700; color: var(--text-2); letter-spacing: .1px; }
+  .field input, .field select, .field textarea { border: 1px solid var(--border-dk); border-radius: var(--radius); padding: 9px 12px; font-size: 13.5px; color: var(--text); background: var(--surface); outline: none; transition: border-color .15s, box-shadow .15s; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-lt); }
+  .field textarea { resize: vertical; min-height: 70px; font-family: inherit; }
+  .field-hint { font-size: 11px; color: var(--muted-lt); }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .form-row-2 { grid-template-columns: 1fr; } }
+
+  .readonly-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 4px; }
+  @media (max-width: 560px) { .readonly-grid { grid-template-columns: 1fr; } }
+  .ro-item { background: var(--bg); border-radius: var(--radius); padding: 10px 13px; }
+  .ro-label { font-size: 10.5px; font-weight: 700; color: var(--muted-lt); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 3px; }
+  .ro-value { font-size: 13px; font-weight: 600; color: var(--text-2); }
+
+  .btn { border: none; border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
+  .btn-primary { background: var(--ink); color: white; }
+  .btn-primary:hover { background: var(--ink-lt); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border-dk); }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); }
+  .btn-chip { border: 1px solid var(--border-dk); background: var(--surface); color: var(--text-2); font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 20px; cursor: pointer; }
+  .btn-chip:hover { background: var(--bg); }
+  .btn-chip.danger { color: var(--danger); border-color: #FBD5D5; }
+  .btn-chip.danger:hover { background: var(--danger-lt); }
+
+  /* Classmates */
+  .classmates-toolbar { margin-bottom: 16px; }
+  .search-input { width: 100%; max-width: 340px; border: 1px solid var(--border-dk); border-radius: 20px; padding: 9px 16px; font-size: 13px; outline: none; background: var(--surface); }
+  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-lt); }
+  .classmates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .classmate-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 14px; text-align: center; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+  .classmate-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .classmate-card.is-self { border-color: var(--accent); background: var(--accent-lt); }
+  .cc-avatar { width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; background: linear-gradient(150deg, var(--accent) 0%, var(--accent-dk) 100%); color: white; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .cc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .cc-name { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .cc-you { font-size: 9.5px; font-weight: 700; color: var(--accent); background: var(--surface); padding: 1px 6px; border-radius: 8px; vertical-align: middle; }
+  .cc-meta { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* Wall / announcements */
+  .composer { margin-bottom: 18px; }
+  .composer textarea { width: 100%; border: 1px solid var(--border-dk); border-radius: var(--radius); padding: 12px 14px; font-size: 13.5px; min-height: 76px; resize: vertical; outline: none; }
+  .composer textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-lt); }
+  .composer-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .post-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 12px; }
+  .post-card.pinned { border-color: var(--warn); background: var(--warn-lt); }
+  .post-pin { font-size: 11px; font-weight: 700; color: var(--warn); margin-bottom: 8px; }
+  .post-meta { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+  .post-author { font-weight: 700; color: var(--text-2); }
+  .post-dot { opacity: .5; }
+  .post-message { font-size: 13.5px; color: var(--text); line-height: 1.65; white-space: pre-wrap; }
+  .post-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+  .empty-state { text-align: center; padding: 46px 20px; color: var(--muted-lt); font-size: 13px; }
+
+  /* Classmate view modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: none; align-items: center; justify-content: center; z-index: 400; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .cm-modal { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 380px; overflow: hidden; }
+  .cm-cover { height: 110px; background: linear-gradient(120deg, var(--accent-lt) 0%, #FFFBEB 100%); background-size: cover; background-position: center; }
+  .cm-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(15,23,42,.55); color: white; cursor: pointer; font-size: 15px; }
+  .cm-body { padding: 0 22px 22px; position: relative; }
+  .cm-avatar-wrap { width: 78px; margin-top: -39px; margin-bottom: 10px; }
+  .cm-avatar { width: 78px; height: 78px; border-radius: 50%; border: 4px solid var(--surface); object-fit: cover; box-shadow: var(--shadow); display: block; background: var(--accent-lt); }
+  .cm-avatar-placeholder { width: 78px; height: 78px; border-radius: 50%; border: 4px solid var(--surface); background: linear-gradient(150deg, var(--accent) 0%, var(--accent-dk) 100%); color: white; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 24px; box-shadow: var(--shadow); }
+  .cm-name { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--ink); }
+  .cm-meta { font-size: 12px; color: var(--muted); margin: 5px 0 3px; }
+  .cm-origin { font-size: 11.5px; color: var(--muted-lt); font-style: italic; margin-bottom: 10px; }
+  .cm-bio { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-top: 8px; }
+  .cm-bio.muted { color: var(--muted-lt); font-style: italic; }
+
+  /* Toasts */
+  #toastWrap { position: fixed; bottom: 22px; right: 22px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: var(--ink); color: white; padding: 11px 18px; border-radius: var(--radius); font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(8px); transition: all .25s; }
+  .toast.show { opacity: 1; transform: none; }
+  .toast-success { background: var(--success); }
+  .toast-error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- ── LANDING / LOGIN ─────────────────────────────────────────────────── -->
+<div id="loginOverlay">
+  <div class="landing-logo">
+    <div class="landing-logo-mark">S</div>
+    <div class="landing-logo-text">Student Hub</div>
+  </div>
+  <div class="landing-wrap">
+    <div class="landing-grid">
+      <div>
+        <div class="landing-eyebrow">For enrolled students</div>
+        <h1 class="landing-title">Your student profile,<br><em>all in one place.</em></h1>
+        <p class="landing-sub">See your enrollment details, keep your photo and bio up to date, meet your classmates, and catch every school announcement — all from your Google account.</p>
+        <div class="landing-features">
+          <div class="lf-item"><div class="lf-icon">🪪</div> Manage your name, photo, birthday, and bio</div>
+          <div class="lf-item"><div class="lf-icon">👥</div> Browse your classmates and campus</div>
+          <div class="lf-item"><div class="lf-icon">📣</div> Never miss a school announcement</div>
+        </div>
+        <div id="gsiButtonWrap"></div>
+        <div class="login-msg" id="loginMsg"></div>
+      </div>
+      <div class="id-stack">
+        <div class="id-card id-card-1"><div class="id-card-inner">
+          <div class="id-card-top"><div class="id-card-dot"></div><div class="id-card-lines"><div class="id-card-line w60"></div><div class="id-card-line w40"></div></div></div>
+          <div class="id-card-bar"></div>
+        </div></div>
+        <div class="id-card id-card-2"><div class="id-card-inner">
+          <div class="id-card-top"><div class="id-card-dot"></div><div class="id-card-lines"><div class="id-card-line w60"></div><div class="id-card-line w40"></div></div></div>
+          <div class="id-card-bar"></div>
+        </div></div>
+        <div class="id-card id-card-3"><div class="id-card-inner">
+          <div class="id-card-top"><div class="id-card-dot"></div><div class="id-card-lines"><div class="id-card-line w80"></div><div class="id-card-line w40"></div></div></div>
+          <div class="id-card-line w60" style="margin-top:8px;"></div>
+          <div class="id-card-bar"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SHELL ────────────────────────────────────────────────────────── -->
+<div id="appShell">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-mark">S</div>
+      <div class="topbar-title">Student Hub</div>
+    </div>
+    <div class="topbar-right">
+      <div class="notif-wrap">
+        <button class="notif-btn" onclick="toggleNotifDropdown()" title="Notifications">
+          🔔
+          <span class="notif-badge" id="notifBadge">0</span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-dropdown-head">Notifications</div>
+          <div id="notifList"></div>
+        </div>
+      </div>
+      <div class="user-chip">
+        <img id="userAvatar" src="" alt="">
+        <span class="user-chip-name" id="userName"></span>
+      </div>
+      <button class="signout-btn" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="page">
+    <!-- Profile header -->
+    <div class="profile-header" id="profileHeader"><!-- rendered by renderProfileHeader() --></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" id="tab-profile" onclick="switchTab('profile')">My Profile</button>
+      <button class="tab" id="tab-classmates" onclick="switchTab('classmates')">Classmates</button>
+      <button class="tab" id="tab-wall" onclick="switchTab('wall')">Announcements</button>
+    </div>
+
+    <!-- My Profile panel -->
+    <div class="tab-panel active" id="panel-profile">
+      <div id="profileFormWrap"><!-- rendered by renderMyProfilePanel() --></div>
+    </div>
+
+    <!-- Classmates panel -->
+    <div class="tab-panel" id="panel-classmates">
+      <div class="classmates-toolbar">
+        <input type="text" class="search-input" id="classSearch" placeholder="Search by name, course, or campus…" oninput="renderClassmates()">
+      </div>
+      <div class="classmates-grid" id="classmatesGrid"></div>
+    </div>
+
+    <!-- Wall panel -->
+    <div class="tab-panel" id="panel-wall">
+      <div class="composer card" id="composerCard" style="display:none;">
+        <div class="card-body">
+          <textarea id="composerText" placeholder="Post an announcement for all students…" maxlength="2000"></textarea>
+          <div class="composer-footer">
+            <button class="btn btn-primary" id="composerBtn" onclick="postAnnouncementUI()">Post</button>
+          </div>
+        </div>
+      </div>
+      <div id="wallList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file inputs for avatar/cover uploads -->
+<input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="handleAvatarSelect(event)">
+<input type="file" id="coverInput" accept="image/*" style="display:none;" onchange="handleCoverSelect(event)">
+
+<!-- Classmate view modal -->
+<div class="modal-overlay" id="classmateModal">
+  <div class="cm-modal" style="position:relative;">
+    <button class="cm-close" onclick="document.getElementById('classmateModal').classList.remove('open')">✕</button>
+    <div id="cmModalBody"></div>
+  </div>
+</div>
+
+<div id="toastWrap"></div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────────────────
+// Same backend deployment as the admin registry — this page just calls a
+// narrower, student-safe slice of its API (getDirectory / getMyRecord /
+// getAnnouncements) instead of the full admin getRecords.
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxq7O4an7fkam6XbhaYMoGZJgPJVEdc98BpxxacENwOKc-jcKv4EJO__m8ZMB5hEEYF/exec';
+const GOOGLE_CLIENT_ID = '432071525789-eo7tb1b1mlal146lol24nd6il1ccpqjk.apps.googleusercontent.com';
+
+// ── STATE ────────────────────────────────────────────────────────────────
+let currentIdToken   = null;
+let currentUserRole  = '';   // 'super_admin' | 'admin' | 'encoder' | 'student'
+let currentUserEmail = '';
+let myRecord          = null; // full self-record (student role only); null for staff without a linked record
+let allDirectory       = [];
+let allAnnouncements   = [];
+let lastComputedNotifs = [];
+
+function isAdmin() { return currentUserRole === 'admin' || currentUserRole === 'super_admin'; }
+
+// ── AUTH HELPERS ─────────────────────────────────────────────────────────
+function withAuth(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  return url + sep + 'idToken=' + encodeURIComponent(currentIdToken || '');
+}
+function withAuthPayload(payload) {
+  return Object.assign({}, payload, { idToken: currentIdToken });
+}
+function showLoginMsg(text, type) {
+  const el = document.getElementById('loginMsg');
+  el.textContent = text;
+  el.className = 'login-msg ' + (type || 'info');
+}
+function handleAuthError(customMsg) {
+  currentIdToken = null;
+  currentUserRole = '';
+  currentUserEmail = '';
+  myRecord = null;
+  document.getElementById('appShell').classList.remove('ready');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  showLoginMsg(customMsg || 'Your session expired or this account is not linked yet. Please sign in again, or ask your school admin to link your Gmail to your student record.', 'error');
+  try { google.accounts.id.disableAutoSelect(); } catch(e) {}
+}
+function handleLogout() {
+  currentIdToken = null;
+  currentUserRole = '';
+  currentUserEmail = '';
+  myRecord = null;
+  try { google.accounts.id.disableAutoSelect(); } catch(e) {}
+  document.getElementById('appShell').classList.remove('ready');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  showLoginMsg('', '');
+}
+
+async function handleCredentialResponse(response) {
+  currentIdToken = response.credential;
+  let claims = {};
+  try { claims = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e) {}
+
+  showLoginMsg('Verifying access…', 'info');
+  document.getElementById('gsiButtonWrap').style.display = 'none';
+
+  let verified = false;
+  try {
+    // getDirectory doubles as our "verify + fetch" call: it's the narrowest
+    // endpoint that both confirms the token is valid/whitelisted AND is
+    // safe to call regardless of role (admin, encoder, or student).
+    const res  = await fetch(withAuth(GAS_URL + '?action=getDirectory'));
+    const data = await res.json();
+    if (data.status === 'ok') {
+      verified = true;
+      allDirectory = data.directory || [];
+      currentUserRole = data.role || 'student';
+    } else if (data.code === 401) {
+      handleAuthError();
+    } else {
+      showLoginMsg('Connection error. Please try again.', 'error');
+    }
+  } catch (e) {
+    showLoginMsg('Connection error. Please try again.', 'error');
+  }
+
+  document.getElementById('gsiButtonWrap').style.display = '';
+  if (!verified) return;
+
+  currentUserEmail = (claims.email || '').toLowerCase();
+  document.getElementById('userAvatar').src = claims.picture || '';
+  document.getElementById('userName').textContent = claims.name || claims.email || '';
+
+  await Promise.all([loadMyRecord(), loadAnnouncements()]);
+  renderClassmates();
+
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('appShell').classList.add('ready');
+  showLoginMsg('', '');
+
+  switchTab(myRecord ? 'profile' : 'classmates');
+}
+
+window.addEventListener('load', () => {
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,
+    auto_select: true,
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('gsiButtonWrap'),
+    { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'signin_with' }
+  );
+  google.accounts.id.prompt();
+});
+
+// ── SMALL HELPERS ────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return (str || '').toString().replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function initialsFor(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+function emptyState(msg) { return `<div class="empty-state">${escapeHtml(msg)}</div>`; }
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + (type || 'info');
+  el.textContent = msg;
+  document.getElementById('toastWrap').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3200);
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+
+// Converts the server's display-formatted date strings back to yyyy-MM-dd
+// for <input type="date">. Mirrors the same logic used in registry.html so
+// both frontends parse dates identically.
+function toInputDate(str) {
+  if (!str) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str.trim())) return str.trim();
+  const iso = str.match(/^(\d{4}-\d{2}-\d{2})T/);
+  if (iso) return iso[1];
+  const cleaned = str.replace(/(\d+)(st|nd|rd|th)/g, '$1').replace(' of ', ' ');
+  let m = cleaned.match(/^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/);
+  if (m) {
+    const monthIdx = MONTH_NAMES.findIndex(mo => mo.toLowerCase() === m[1].toLowerCase());
+    if (monthIdx > -1) return `${m[3]}-${String(monthIdx + 1).padStart(2,'0')}-${String(parseInt(m[2],10)).padStart(2,'0')}`;
+  }
+  m = cleaned.match(/^(\d{1,2})\s+([A-Za-z]+),\s*(\d{4})$/);
+  if (m) {
+    const monthIdx = MONTH_NAMES.findIndex(mo => mo.toLowerCase() === m[2].toLowerCase());
+    if (monthIdx > -1) return `${m[3]}-${String(monthIdx + 1).padStart(2,'0')}-${String(parseInt(m[1],10)).padStart(2,'0')}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d)) return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+  return '';
+}
+
+// ── MY RECORD / PROFILE HEADER ──────────────────────────────────────────
+async function loadMyRecord() {
+  if (currentUserRole !== 'student') { myRecord = null; renderProfileHeader(); renderMyProfilePanel(); return; }
+  try {
+    const res  = await fetch(withAuth(GAS_URL + '?action=getMyRecord'));
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    myRecord = (data.status === 'ok') ? data.record : null;
+  } catch (e) {
+    myRecord = null;
+  }
+  renderProfileHeader();
+  renderMyProfilePanel();
+}
+
+function renderProfileHeader() {
+  const el = document.getElementById('profileHeader');
+  if (!myRecord) {
+    el.innerHTML = `
+      <div class="ph-cover"></div>
+      <div class="ph-body">
+        <div class="ph-avatar-wrap"><div class="ph-avatar-placeholder">${escapeHtml((document.getElementById('userName').textContent || '?')[0] || '?')}</div></div>
+        <div class="ph-name">${escapeHtml(document.getElementById('userName').textContent || 'Staff account')}</div>
+        <div class="ph-badges"><span class="ph-badge warn">${currentUserRole === 'admin' ? 'Admin' : currentUserRole === 'super_admin' ? 'Super Admin' : 'Encoder'}</span></div>
+        <div class="ph-staff-note">This account isn't linked to a student record, so there's no personal profile to edit here. You can still browse Classmates${isAdmin() ? ' and post to Announcements' : ''}.</div>
+      </div>`;
+    return;
+  }
+  const badge = myRecord.course ? `<span class="ph-badge">${escapeHtml(myRecord.course)}${myRecord.type ? ' · ' + escapeHtml(myRecord.type) : ''}</span>` : '';
+  const campusBadge = myRecord.campus ? `<span class="ph-badge warn">${escapeHtml(myRecord.campus)}</span>` : '';
+  el.innerHTML = `
+    <div class="ph-cover" id="ph_cover" style="${myRecord.coverPhoto ? `background-image:url('${myRecord.coverPhoto}')` : ''}">
+      <button class="ph-cover-edit" onclick="document.getElementById('coverInput').click()">Change cover</button>
+    </div>
+    <div class="ph-body">
+      <div class="ph-avatar-wrap">
+        ${myRecord.photo
+          ? `<img class="ph-avatar" id="ph_avatar" src="${myRecord.photo}" alt="">`
+          : `<div class="ph-avatar-placeholder" id="ph_avatar">${escapeHtml(initialsFor(myRecord.fullName))}</div>`}
+        <button class="ph-avatar-edit" onclick="document.getElementById('avatarInput').click()" title="Change photo">✎</button>
+      </div>
+      <div class="ph-name">${escapeHtml(myRecord.fullName || '')}</div>
+      <div class="ph-badges">${badge}${campusBadge}</div>
+      <div class="ph-bio ${myRecord.bio ? '' : 'muted'}">${myRecord.bio ? escapeHtml(myRecord.bio).replace(/\n/g,'<br>') : 'No bio yet — add one from the form below.'}</div>
+    </div>`;
+}
+
+function renderMyProfilePanel() {
+  const wrap = document.getElementById('profileFormWrap');
+  if (!myRecord) {
+    wrap.innerHTML = `<div class="card"><div class="card-body">${emptyState("Nothing to edit here yet.")}</div></div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Edit My Profile</div>
+        <div class="card-sub">You can update your name, photo, birthday, sex, bio, and memo. Everything else — Student ID, Course, Campus, and dates — is managed by the school.</div>
+      </div>
+      <div class="card-body">
+        <div class="form-row-2">
+          <div class="field">
+            <label>Full Name</label>
+            <input type="text" id="pf_fullName" value="${escapeHtml(myRecord.fullName || '')}">
+          </div>
+          <div class="field">
+            <label>Birth Day</label>
+            <input type="date" id="pf_birthDay" value="${toInputDate(myRecord.birthDay)}">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label>Sex</label>
+            <select id="pf_sex">
+              <option value="" ${!myRecord.sex ? 'selected' : ''}>—</option>
+              <option value="Male" ${myRecord.sex === 'Male' ? 'selected' : ''}>Male</option>
+              <option value="Female" ${myRecord.sex === 'Female' ? 'selected' : ''}>Female</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Student ID <span style="font-weight:400;color:var(--muted-lt);">(locked)</span></label>
+            <input type="text" value="${escapeHtml(myRecord.studentId || '')}" disabled style="background:var(--bg);color:var(--muted);">
+          </div>
+        </div>
+        <div class="field">
+          <label>Bio <span style="font-weight:400;color:var(--muted-lt);">shown on your profile</span></label>
+          <textarea id="pf_bio" maxlength="280" placeholder="Tell your classmates a bit about yourself…">${escapeHtml(myRecord.bio || '')}</textarea>
+          <span class="field-hint">Max 280 characters.</span>
+        </div>
+        <div class="field">
+          <label>Memo</label>
+          <textarea id="pf_memo" placeholder="Anything you'd like to note for yourself or the school…">${escapeHtml(myRecord.memo || '')}</textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn btn-primary" id="pf_saveBtn" onclick="saveMyProfile()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div class="card-header"><div class="card-title">Enrollment Info</div><div class="card-sub">Managed by the school — contact your admin to make changes.</div></div>
+      <div class="card-body">
+        <div class="readonly-grid">
+          <div class="ro-item"><div class="ro-label">Course</div><div class="ro-value">${escapeHtml(myRecord.course || '—')}${myRecord.type ? ' · ' + escapeHtml(myRecord.type) : ''}</div></div>
+          <div class="ro-item"><div class="ro-label">Campus</div><div class="ro-value">${escapeHtml(myRecord.campus || '—')}</div></div>
+          <div class="ro-item"><div class="ro-label">Date Started</div><div class="ro-value">${escapeHtml(myRecord.dateStarted || '—')}</div></div>
+          <div class="ro-item"><div class="ro-label">Date Ended</div><div class="ro-value">${escapeHtml(myRecord.dateEnded || '—')}</div></div>
+          <div class="ro-item"><div class="ro-label">Graduation</div><div class="ro-value">${escapeHtml(myRecord.dateGrad || '—')}</div></div>
+          <div class="ro-item"><div class="ro-label">Origin School</div><div class="ro-value">${escapeHtml(myRecord.originSchool || '—')}</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function saveMyProfile() {
+  if (!myRecord) return;
+  const btn = document.getElementById('pf_saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const payload = {
+    action:   'edit',
+    rowNo:    myRecord.rowNo,
+    fullName: document.getElementById('pf_fullName').value.trim(),
+    birthDay: document.getElementById('pf_birthDay').value,
+    sex:      document.getElementById('pf_sex').value,
+    bio:      document.getElementById('pf_bio').value.trim(),
+    memo:     document.getElementById('pf_memo').value.trim(),
+  };
+
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload(payload)) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      Object.assign(myRecord, {
+        fullName: payload.fullName,
+        birthDay: document.getElementById('pf_birthDay').value ? formatDateForDisplay(payload.birthDay) : myRecord.birthDay,
+        sex: payload.sex, bio: payload.bio, memo: payload.memo,
+      });
+      renderProfileHeader();
+      toast('Profile updated!', 'success');
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch (e) {
+    toast('Connection error while saving.', 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Changes';
+}
+
+// Quick yyyy-MM-dd -> "Month D, YYYY" formatter, just for optimistic local
+// display after a save (the next full reload will use the server's format).
+function formatDateForDisplay(yyyyMmDd) {
+  if (!yyyyMmDd) return '';
+  const [y, m, d] = yyyyMmDd.split('-').map(n => parseInt(n, 10));
+  if (!y || !m || !d) return yyyyMmDd;
+  return `${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+}
+
+// ── PHOTO / COVER UPLOAD ─────────────────────────────────────────────────
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function cropToDataUri(file, outW, outH) {
+  const img = await readImageFile(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  const srcRatio = img.width / img.height;
+  const dstRatio = outW / outH;
+  let sx, sy, sw, sh;
+  if (srcRatio > dstRatio) { sh = img.height; sw = sh * dstRatio; sx = (img.width - sw) / 2; sy = 0; }
+  else { sw = img.width; sh = sw / dstRatio; sx = 0; sy = (img.height - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+  let dataUri = canvas.toDataURL('image/jpeg', 0.82);
+  if (dataUri.length > 45000) dataUri = canvas.toDataURL('image/jpeg', 0.6);
+  if (dataUri.length > 45000) dataUri = canvas.toDataURL('image/jpeg', 0.4);
+  return dataUri;
+}
+async function handleAvatarSelect(e) {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file || !myRecord) return;
+  if (!file.type.startsWith('image/')) { toast('Please choose an image file.', 'error'); return; }
+  try { await uploadImage('photo', await cropToDataUri(file, 320, 320)); }
+  catch (err) { toast('Could not process that image.', 'error'); }
+}
+async function handleCoverSelect(e) {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file || !myRecord) return;
+  if (!file.type.startsWith('image/')) { toast('Please choose an image file.', 'error'); return; }
+  try { await uploadImage('coverPhoto', await cropToDataUri(file, 960, 300)); }
+  catch (err) { toast('Could not process that image.', 'error'); }
+}
+async function uploadImage(field, dataUri) {
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'uploadPhoto', rowNo: myRecord.rowNo, field, photoDataUri: dataUri })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      myRecord[field] = dataUri;
+      renderProfileHeader();
+      toast(field === 'photo' ? 'Profile photo updated!' : 'Cover photo updated!', 'success');
+    } else {
+      toast('Error: ' + (data.message || 'Unknown'), 'error');
+    }
+  } catch (e) {
+    toast('Connection error while uploading.', 'error');
+  }
+}
+
+// ── CLASSMATES ───────────────────────────────────────────────────────────
+function renderClassmates() {
+  const q = (document.getElementById('classSearch').value || '').toLowerCase().trim();
+  const grid = document.getElementById('classmatesGrid');
+  const filtered = allDirectory.filter(r =>
+    !q ||
+    (r.fullName || '').toLowerCase().includes(q) ||
+    (r.course   || '').toLowerCase().includes(q) ||
+    (r.campus   || '').toLowerCase().includes(q)
+  );
+  if (!filtered.length) { grid.innerHTML = emptyState('No classmates found.'); return; }
+  grid.innerHTML = filtered.map(r => `
+    <div class="classmate-card ${r.isSelf ? 'is-self' : ''}" onclick="openClassmate(${r.rowNo})">
+      <div class="cc-avatar">${r.photo ? `<img src="${r.photo}" alt="">` : escapeHtml(initialsFor(r.fullName))}</div>
+      <div class="cc-name">${escapeHtml(r.fullName)}${r.isSelf ? ' <span class="cc-you">You</span>' : ''}</div>
+      <div class="cc-meta">${escapeHtml(r.course || '')}${r.campus ? ' · ' + escapeHtml(r.campus) : ''}</div>
+    </div>
+  `).join('');
+}
+function openClassmate(rowNo) {
+  const r = allDirectory.find(x => x.rowNo === rowNo);
+  if (!r) return;
+  document.getElementById('cmModalBody').innerHTML = `
+    <div class="cm-cover" style="${r.coverPhoto ? `background-image:url('${r.coverPhoto}')` : ''}"></div>
+    <div class="cm-body">
+      <div class="cm-avatar-wrap">
+        ${r.photo ? `<img class="cm-avatar" src="${r.photo}" alt="">` : `<div class="cm-avatar-placeholder">${escapeHtml(initialsFor(r.fullName))}</div>`}
+      </div>
+      <div class="cm-name">${escapeHtml(r.fullName)}${r.isSelf ? ' <span class="cc-you">You</span>' : ''}</div>
+      <div class="cm-meta">${escapeHtml(r.course || '')}${r.campus ? ' · ' + escapeHtml(r.campus) : ''}</div>
+      ${r.originSchool ? `<div class="cm-origin">${escapeHtml(r.originSchool)}</div>` : ''}
+      <div class="cm-bio ${r.bio ? '' : 'muted'}">${r.bio ? escapeHtml(r.bio).replace(/\n/g,'<br>') : 'No bio yet.'}</div>
+    </div>`;
+  document.getElementById('classmateModal').classList.add('open');
+}
+document.getElementById('classmateModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ── ANNOUNCEMENTS / WALL ─────────────────────────────────────────────────
+async function loadAnnouncements() {
+  try {
+    const res  = await fetch(withAuth(GAS_URL + '?action=getAnnouncements'));
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') {
+      allAnnouncements = data.announcements || [];
+      renderWall();
+      renderNotifBell();
+    }
+  } catch (e) { /* silent — wall just stays empty */ }
+}
+function renderWall() {
+  document.getElementById('composerCard').style.display = isAdmin() ? '' : 'none';
+  const wrap = document.getElementById('wallList');
+  if (!allAnnouncements.length) { wrap.innerHTML = emptyState('No announcements yet.'); return; }
+  wrap.innerHTML = allAnnouncements.map(a => `
+    <div class="post-card ${a.pinned ? 'pinned' : ''}">
+      ${a.pinned ? '<div class="post-pin">📌 Pinned</div>' : ''}
+      <div class="post-meta"><span class="post-author">${escapeHtml(a.postedByName)}</span><span class="post-dot">·</span><span class="post-time">${escapeHtml(a.timestamp)}</span></div>
+      <div class="post-message">${escapeHtml(a.message)}</div>
+      ${isAdmin() ? `<div class="post-actions">
+        <button class="btn-chip" onclick="togglePin('${a.id}')">${a.pinned ? 'Unpin' : 'Pin'}</button>
+        <button class="btn-chip danger" onclick="removeAnnouncement('${a.id}')">Delete</button>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+async function postAnnouncementUI() {
+  const ta = document.getElementById('composerText');
+  const message = ta.value.trim();
+  if (!message) return;
+  const btn = document.getElementById('composerBtn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'postAnnouncement', message })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') { ta.value = ''; toast('Posted!', 'success'); await loadAnnouncements(); }
+    else toast('Error: ' + (data.message || 'Unknown'), 'error');
+  } catch (e) { toast('Connection error.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Post';
+}
+async function togglePin(id) {
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'togglePinAnnouncement', id })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') await loadAnnouncements();
+    else toast('Error: ' + (data.message || 'Unknown'), 'error');
+  } catch (e) { toast('Connection error.', 'error'); }
+}
+async function removeAnnouncement(id) {
+  if (!confirm('Delete this announcement? This can\'t be undone.')) return;
+  try {
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(withAuthPayload({ action: 'deleteAnnouncement', id })) });
+    const data = await res.json();
+    if (data.status === 'error' && data.code === 401) { handleAuthError(); return; }
+    if (data.status === 'ok') { toast('Deleted.', 'success'); await loadAnnouncements(); }
+    else toast('Error: ' + (data.message || 'Unknown'), 'error');
+  } catch (e) { toast('Connection error.', 'error'); }
+}
+
+// ── NOTIFICATIONS (local, per-browser — nothing sensitive is stored) ────
+// Tracks what this browser has already seen using localStorage, keyed by
+// the signed-in email. This is just a "seen/unseen" convenience layer for
+// this one device; it's not a substitute for the actual data (which always
+// comes fresh from the server) and never contains anyone else's info.
+function getSeenState() {
+  try {
+    const raw = localStorage.getItem('studenthub_seen_' + currentUserEmail);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { editedAt: '', annIds: [] };
+}
+function markAllSeen() {
+  const state = { editedAt: (myRecord && myRecord.lastEditedAt) || '', annIds: allAnnouncements.map(a => a.id) };
+  try { localStorage.setItem('studenthub_seen_' + currentUserEmail, JSON.stringify(state)); } catch (e) {}
+}
+function computeNotifications() {
+  const seen = getSeenState();
+  const notifs = [];
+  if (myRecord && myRecord.lastEditedAt && myRecord.lastEditedBy &&
+      myRecord.lastEditedBy.toLowerCase() !== currentUserEmail &&
+      myRecord.lastEditedAt !== seen.editedAt) {
+    notifs.push({ text: `Your profile was updated by ${myRecord.lastEditedBy}.`, time: myRecord.lastEditedAt });
+  }
+  allAnnouncements.forEach(a => {
+    if (seen.annIds.indexOf(a.id) === -1) {
+      const preview = a.message.length > 70 ? a.message.slice(0, 70) + '…' : a.message;
+      notifs.push({ text: `New announcement: "${preview}"`, time: a.timestamp });
+    }
+  });
+  return notifs;
+}
+function renderNotifBell() {
+  lastComputedNotifs = computeNotifications();
+  const badge = document.getElementById('notifBadge');
+  if (lastComputedNotifs.length) { badge.textContent = lastComputedNotifs.length; badge.style.display = 'flex'; }
+  else badge.style.display = 'none';
+}
+function toggleNotifDropdown() {
+  const dd = document.getElementById('notifDropdown');
+  const opening = !dd.classList.contains('open');
+  if (opening) {
+    document.getElementById('notifList').innerHTML = lastComputedNotifs.length
+      ? lastComputedNotifs.map(n => `<div class="notif-item"><div class="notif-text">${escapeHtml(n.text)}</div><div class="notif-time">${escapeHtml(n.time || '')}</div></div>`).join('')
+      : emptyState('No new notifications.');
+    markAllSeen();
+    document.getElementById('notifBadge').style.display = 'none';
+  }
+  dd.classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.notif-wrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('notifDropdown').classList.remove('open');
+});
+
+// ── TABS ─────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  ['profile', 'classmates', 'wall'].forEach(n => {
+    document.getElementById('tab-' + n).classList.toggle('active', n === name);
+    document.getElementById('panel-' + n).classList.toggle('active', n === name);
+  });
+}
+</script>
+</body>
+</html>
