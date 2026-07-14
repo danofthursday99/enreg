@@ -224,6 +224,21 @@
   .role-encoder #recordsTable td:nth-child(1) { display: none; }
   .role-encoder #recordsTable tr { cursor: default; }
 
+  /* Student role: read-only records list, no Add/Bulk Import tabs, no bulk actions. */
+  .role-student #bulkBar { display: none !important; }
+  .role-student #recordsTable th:nth-child(1),
+  .role-student #recordsTable td:nth-child(1) { display: none; }
+  .role-student #recordsTable tr { cursor: default; }
+  .role-student .tab[onclick="switchTab('add')"],
+  .role-student .tab[onclick="switchTab('import')"] { display: none !important; }
+
+  /* Edit modal: fields locked out for a student editing their own record. */
+  #editModal.fields-locked input:disabled,
+  #editModal.fields-locked select:disabled,
+  #editModal.fields-locked button:disabled {
+    background: var(--surface); color: var(--muted); cursor: not-allowed; opacity: .6;
+  }
+
   /* ── PROFILE MODAL (redesigned hero card) ───────────────────────────── */
   #profileModal .modal { max-width: 420px; overflow-y: auto; overflow-x: hidden; }
   #profileModal .modal-body { padding: 0; }
@@ -590,6 +605,11 @@
           <input type="text" id="m_originSchool" placeholder="e.g. Tokyo Gakkan High Student — shown on the ID card under the name">
           <span class="field-hint">Printed as a line under the student's name on the ID card (front). Leave blank to omit.</span>
         </div>
+        <div class="field span-3" id="m_studentEmailWrap">
+          <label>Student Email <span style="color:var(--warn);font-size:10px;font-style:italic;">links their Google sign-in to this record</span></label>
+          <input type="email" id="m_studentEmail" placeholder="student@gmail.com — leave blank if not linked yet">
+          <span class="field-hint">Once linked, the student can sign in with this Google account and edit only their own Full Name, Photo, Birth Day, Sex, and Memo. Everything else stays locked for them.</span>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -722,6 +742,11 @@
             <label>Origin School / ID Card Descriptor <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
             <input type="text" id="originSchool" placeholder="e.g. Tokyo Gakkan High Student — shown on the ID card under the name">
             <span class="field-hint">Printed as a line under the student's name on the ID card (front). Leave blank to omit.</span>
+          </div>
+          <div class="field span-3">
+            <label>Student Email <span style="color:var(--warn);font-size:10px;font-style:italic;">optional — links their Google sign-in</span></label>
+            <input type="email" id="studentEmail" placeholder="student@gmail.com — leave blank to link later from Edit Record">
+            <span class="field-hint">Once linked, the student can sign in with this Google account and edit only their own Full Name, Photo, Birth Day, Sex, and Memo.</span>
           </div>
         </div>
         <div class="form-footer">
@@ -903,13 +928,26 @@ const GOOGLE_CLIENT_ID = '432071525789-eo7tb1b1mlal146lol24nd6il1ccpqjk.apps.goo
 let currentIdToken = null; // set after successful Google Sign-In; sent with every backend request
 
 // ── ROLE-BASED PERMISSIONS ──────────────────────────────────────────────────
-// 'admin'   → full access (add, edit, archive, bulk actions)
-// 'encoder' → can register/add new students and view the list, but cannot
-//             edit, archive, or use bulk actions. Defaults to 'admin' until
-//             the backend starts returning a role (keeps existing behavior
-//             unchanged for everyone until the Sheet/GAS side is wired up).
-let currentUserRole = 'admin';
-function isAdmin() { return currentUserRole === 'admin'; }
+// 'super_admin' → absolute access: can edit ANY record including other
+//                 admins', but their OWN linked record can only be edited
+//                 by themself (enforced server-side).
+// 'admin'       → full access (add, edit, archive, bulk actions).
+// 'encoder'     → can register/add new students and view the list, but
+//                 cannot edit, archive, or use bulk actions.
+// 'student'     → view-only for the list; can edit only their own linked
+//                 record, and only Full Name, Photo, Birth Day, Sex, Memo.
+// Defaults to 'admin' until the backend returns a role (keeps existing
+// behavior unchanged until sign-in completes).
+let currentUserRole  = 'admin';
+let currentUserEmail = ''; // lowercased email of the signed-in account, for isOwnRecord()
+function isAdmin()   { return currentUserRole === 'admin' || currentUserRole === 'super_admin'; }
+function isStudent()  { return currentUserRole === 'student'; }
+
+// True if this record is the signed-in student's own linked record — the
+// one case where a student is allowed to see an "Edit Record" option.
+function isOwnRecord(r) {
+  return isStudent() && !!currentUserEmail && (r.studentEmail || '').toLowerCase() === currentUserEmail;
+}
 
 // Applies (or removes) the visual/interaction restrictions for non-admin
 // roles. Note: this is a UI convenience only — the real security boundary
@@ -917,7 +955,8 @@ function isAdmin() { return currentUserRole === 'admin'; }
 // requests server-side for non-admin users), since anyone can call the API
 // directly and bypass anything done here.
 function applyRolePermissions() {
-  document.body.classList.toggle('role-encoder', !isAdmin());
+  document.body.classList.toggle('role-encoder', currentUserRole === 'encoder');
+  document.body.classList.toggle('role-student', currentUserRole === 'student');
 }
 
 // Appends idToken as a query param to a GET url
@@ -933,6 +972,7 @@ function withAuthPayload(payload) {
 function handleAuthError() {
   currentIdToken = null;
   currentUserRole = 'admin';
+  currentUserEmail = '';
   document.getElementById('appShell').classList.remove('ready');
   document.getElementById('loginOverlay').classList.remove('hidden');
   showLoginMsg('Your session expired or is not authorized. Please sign in again.', 'error');
@@ -978,6 +1018,7 @@ async function handleCredentialResponse(response) {
   document.getElementById('gsiButtonWrap').style.display = '';
   if (!verified) return;
 
+  currentUserEmail = (claims.email || '').toLowerCase();
   document.getElementById('userEmail').textContent = claims.email || '';
   document.getElementById('userAvatar').src = claims.picture || '';
 
@@ -987,11 +1028,15 @@ async function handleCredentialResponse(response) {
 
   loadRecords(); // re-runs the full render pipeline (sorting, filters, dropdowns, etc.)
   loadSchools();
+
+  // Students have no Add/Bulk Import tabs — land them on Records instead.
+  if (currentUserRole === 'student') switchTab('records');
 }
 
 function handleLogout() {
   currentIdToken = null;
   currentUserRole = 'admin';
+  currentUserEmail = '';
   try { google.accounts.id.disableAutoSelect(); } catch(e) {}
   document.getElementById('appShell').classList.remove('ready');
   document.getElementById('loginOverlay').classList.remove('hidden');
@@ -1393,7 +1438,7 @@ function toggleTypeField() {
 }
 
 function clearForm() {
-  ['studentId','fullName','country','course','type','dateStarted','dateEnded','dateGrad','birthDay','sex','memo','school','originSchool'].forEach(id => {
+  ['studentId','fullName','country','course','type','dateStarted','dateEnded','dateGrad','birthDay','sex','memo','school','originSchool','studentEmail'].forEach(id => {
     document.getElementById(id).value = '';
     document.getElementById(id).classList.remove('error');
   });
@@ -1435,6 +1480,7 @@ async function saveRecord() {
     sex:         document.getElementById('sex').value,
     memo:        document.getElementById('memo').value.trim(),
     originSchool: document.getElementById('originSchool').value.trim(),
+    studentEmail: document.getElementById('studentEmail').value.trim().toLowerCase(),
     isCamp:      document.getElementById('isCamp').value === 'true',
     school:      document.getElementById('isCamp').value === 'true' ? toTitleCase(document.getElementById('school').value) : '',
   };
@@ -2183,10 +2229,14 @@ function openProfile(rowNo) {
   const colorKey = cardColorFor(r);
   const palette  = CARD_COLOR_PALETTE[colorKey] || CARD_COLOR_PALETTE.blue;
 
+  // Admins/super-admins can edit any photo; a student can only edit their
+  // own linked record's photo. Everyone else sees it read-only.
+  const canEditThis = isAdmin() || isOwnRecord(r);
+
   const photoHtml = r.photo
     ? `<img class="profile-photo" id="profilePhotoBox" src="${r.photo}" alt="">`
     : `<div class="profile-photo-placeholder" id="profilePhotoBox">${initialsFor(r.fullName)}</div>`;
-  const photoEditBtn = isAdmin()
+  const photoEditBtn = canEditThis
     ? `<button class="profile-photo-edit" title="Change photo" onclick="document.getElementById('profilePhotoInput').click()">✎</button>`
     : '';
 
@@ -2248,7 +2298,7 @@ function openProfile(rowNo) {
     ${progressHtml}
     <div class="profile-details-wrap"><div class="profile-details">${detailRows}</div></div>
     <div class="profile-footer-actions">
-      ${isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>` : ''}
+      ${canEditThis ? `<button class="btn btn-ghost btn-sm" onclick="editFromProfile()">Edit Record</button>` : ''}
       <button class="btn btn-ghost btn-sm" onclick="openTemplateModal()">🖼 Template</button>
       <button class="btn btn-ghost btn-sm" onclick="downloadIdCard('pdf')">⬇ PDF</button>
       <button class="btn btn-primary btn-sm" onclick="downloadIdCard('png')">⬇ Download ID</button>
@@ -2867,6 +2917,22 @@ async function bulkDownloadIdCards() {
   btn.innerHTML = originalLabel;
 }
 
+// Disables (or re-enables) every field a 'student' role isn't allowed to
+// change on their own record. This is UI convenience only — the Apps
+// Script backend re-enforces the same boundary regardless of what gets
+// submitted, so this can never be bypassed by editing the page.
+function applyEditModalFieldLock(locked) {
+  const lockIds = [
+    'm_id', 'm_campToggle', 'm_campus', 'm_country', 'm_course', 'm_type',
+    'm_dateStarted', 'm_dateEnded', 'm_dateGrad', 'm_school', 'm_originSchool',
+  ];
+  lockIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = locked;
+  });
+  document.getElementById('editModal').classList.toggle('fields-locked', locked);
+}
+
 function openEditByRow(rowNo) {
   const i = allRecords.findIndex(rec => rec.rowNo === rowNo);
   if (i === -1) { toast('Could not find that record. Try refreshing.', 'error'); return; }
@@ -2888,6 +2954,16 @@ function openEditByRow(rowNo) {
   setCampToggle('m_', r.isCamp || false);
   document.getElementById('m_school').value      = r.school      || '';
   document.getElementById('m_schoolDateHint').textContent = '';
+
+  // Student Email: admin/super_admin only — this is how an account gets
+  // linked to a record, so a student must never see or set it themself.
+  document.getElementById('m_studentEmail').value = r.studentEmail || '';
+  document.getElementById('m_studentEmailWrap').style.display = isAdmin() ? '' : 'none';
+
+  // Lock down everything except Full Name / Birth Day / Sex / Memo for a
+  // student editing their own record. Admins get the full form.
+  applyEditModalFieldLock(!isAdmin());
+
   document.getElementById('editModal').classList.add('open');
 }
 
@@ -2924,6 +3000,12 @@ async function saveEdit() {
     isCamp:      document.getElementById('m_isCamp').value === 'true',
     school:      document.getElementById('m_isCamp').value === 'true' ? toTitleCase(document.getElementById('m_school').value) : '',
   };
+  // Student Email links an account to a record — only admins/super_admin
+  // may view or change it. A student's own edit never sends this field, so
+  // the backend simply keeps whatever is already there.
+  if (isAdmin()) {
+    payload.studentEmail = document.getElementById('m_studentEmail').value.trim().toLowerCase();
+  }
   // Remember any new school name for future suggestions
   if (payload.isCamp && payload.school) {
     saveSchool(payload.school);
