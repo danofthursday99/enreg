@@ -248,6 +248,12 @@
   /* ── PROFILE MODAL (redesigned hero card) ───────────────────────────── */
   #profileModal .modal { max-width: 420px; overflow-y: auto; overflow-x: hidden; }
   #profileModal .modal-body { padding: 0; }
+  .profile-nav-btn { position: fixed; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,.15); color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s, opacity .15s; z-index: 501; }
+  .profile-nav-btn:hover:not(:disabled) { background: rgba(255,255,255,.3); }
+  .profile-nav-btn:disabled { opacity: .2; cursor: default; }
+  #profileNavPrev { left: 18px; }
+  #profileNavNext { right: 18px; }
+  @media (max-width: 640px) { .profile-nav-btn { width: 36px; height: 36px; font-size: 17px; } #profileNavPrev { left: 6px; } #profileNavNext { right: 6px; } }
   .profile-hero { position: relative; padding: 26px 22px 50px; text-align: center;
     background: linear-gradient(135deg, var(--hero-main, var(--accent)), var(--hero-dark, var(--accent-dk))); }
   .profile-hero-close { position: absolute; top: 12px; left: 12px; width: 28px; height: 28px; border-radius: 50%;
@@ -387,9 +393,11 @@
 <!-- PROFILE MODAL -->
 <div class="row-menu" id="rowActionMenu"></div>
 <div class="modal-overlay" id="profileModal">
+  <button class="profile-nav-btn" id="profileNavPrev" title="Previous student" onclick="event.stopPropagation();navProfile(-1)">❮</button>
   <div class="modal">
     <div class="modal-body" id="profileModalBody"><!-- fully rendered by openProfile() --></div>
   </div>
+  <button class="profile-nav-btn" id="profileNavNext" title="Next student" onclick="event.stopPropagation();navProfile(1)">❯</button>
 </div>
 <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
 <!-- PHOTO ADJUST MODAL -->
@@ -1981,6 +1989,7 @@ function renderTable(rows) {
   if (currentPage > totalPages) currentPage = totalPages;
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageRows = sorted.slice(start, start + PAGE_SIZE);
+  profileNavList = sorted; // lets the profile modal's prev/next arrows walk the whole filtered list, not just this page
 
   tbody.innerHTML = pageRows.map((r, i) => {
     const endedCell = r.dateEnded ? r.dateEnded : `<span class="td-tentative">Tentative</span>`;
@@ -2301,6 +2310,7 @@ let editingIndex = -1;
 
 // ── PROFILE MODAL ─────────────────────────────────────────────────────────────
 let profileRowNo = null;
+let profileNavList = []; // current sorted/filtered records — powers the ❮ ❯ prev/next buttons
 
 function pdRow(icon, label, value, tentative) {
   if (value == null || value === '') return '';
@@ -2411,7 +2421,34 @@ function openProfile(rowNo) {
   `;
 
   document.getElementById('profileModal').classList.add('open');
+  updateProfileNavButtons();
 }
+
+// Walks profileNavList (the currently sorted/filtered records, across all
+// pages) forward or backward and re-opens the profile at that position —
+// same idea as swiping through photos on Facebook.
+function navProfile(delta) {
+  const idx = profileNavList.findIndex(rec => rec.rowNo === profileRowNo);
+  if (idx === -1) return;
+  const nextIdx = idx + delta;
+  if (nextIdx < 0 || nextIdx >= profileNavList.length) return;
+  openProfile(profileNavList[nextIdx].rowNo);
+}
+
+function updateProfileNavButtons() {
+  const idx = profileNavList.findIndex(rec => rec.rowNo === profileRowNo);
+  const prevBtn = document.getElementById('profileNavPrev');
+  const nextBtn = document.getElementById('profileNavNext');
+  if (!prevBtn || !nextBtn) return;
+  prevBtn.disabled = idx <= 0;
+  nextBtn.disabled = idx === -1 || idx >= profileNavList.length - 1;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('profileModal').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') navProfile(-1);
+  else if (e.key === 'ArrowRight') navProfile(1);
+});
 
 function closeProfileModal() {
   document.getElementById('profileModal').classList.remove('open');
