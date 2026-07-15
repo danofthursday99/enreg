@@ -95,6 +95,13 @@
   .search-bar input:focus, .search-bar select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
   .record-count { font-size: 12px; color: var(--muted); white-space: nowrap; font-weight: 500; }
   .table-wrap { overflow-x: auto; }
+  .row-menu-btn { width: 30px; height: 28px; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; cursor: pointer; font-size: 15px; line-height: 1; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+  .row-menu-btn:hover { background: var(--bg); color: var(--text); }
+  .row-menu { position: fixed; min-width: 130px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-md); z-index: 500; display: none; flex-direction: column; overflow: hidden; padding: 4px; }
+  .row-menu.open { display: flex; }
+  .row-menu button { display: block; width: 100%; text-align: left; padding: 7px 10px; font-size: 12.5px; font-weight: 500; background: none; border: none; border-radius: 5px; cursor: pointer; color: var(--text); white-space: nowrap; }
+  .row-menu button:hover { background: var(--bg); }
+  .row-menu button.danger-item { color: var(--danger); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead th { padding: 12px 14px; text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); border-bottom: 1.5px solid var(--border); white-space: nowrap; user-select: none; background: #FAFBFC; }
   thead th.sortable { cursor: pointer; transition: color .12s; }
@@ -378,6 +385,7 @@
 <div class="toast-wrap" id="toastWrap"></div>
 
 <!-- PROFILE MODAL -->
+<div class="row-menu" id="rowActionMenu"></div>
 <div class="modal-overlay" id="profileModal">
   <div class="modal">
     <div class="modal-body" id="profileModalBody"><!-- fully rendered by openProfile() --></div>
@@ -1985,10 +1993,7 @@ function renderTable(rows) {
     const checked   = selectedRows.has(r.rowNo) ? 'checked' : '';
     const rowClass  = (selectedRows.has(r.rowNo) ? 'row-selected ' : '') + (r.archived ? 'archived-row' : '');
     const lastEdit  = r.lastEditedBy ? `<span style="font-size:11px;">${r.lastEditedBy}${r.lastEditedAt ? '<br><span class="td-muted" style="font-size:10px;">'+r.lastEditedAt+'</span>' : ''}</span>` : '<span class="td-muted">—</span>';
-    const archiveBtn = !isAdmin() ? '' : (r.archived
-      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, false)" style="padding:0 8px;">Restore</button>`
-      : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveSingle(${r.rowNo}, true)" style="padding:0 8px;">Archive</button>`);
-    const rowClickHandler = isAdmin() ? `openEditByRow(${r.rowNo})` : `openProfile(${r.rowNo})`;
+    const rowClickHandler = `openProfile(${r.rowNo})`;
     return `<tr onclick="${rowClickHandler}" style="background:${bgColor};" class="${rowClass}">
       <td onclick="event.stopPropagation();" data-label=""><input type="checkbox" class="row-checkbox" ${checked} onchange="toggleRowSelect(${r.rowNo}, this)"></td>
       <td class="td-muted" style="text-align:center;" data-label="">${start + i + 1}</td>
@@ -2005,9 +2010,7 @@ function renderTable(rows) {
       <td class="td-muted" data-label="Memo">${r.isCamp && r.school ? `<span style="font-size:11px;font-weight:600;">${r.school}</span>` : (r.memo || '—')}</td>
       <td data-label="Last Edited">${lastEdit}</td>
       <td onclick="event.stopPropagation();" data-label="" style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openProfile(${r.rowNo})" style="padding:0 8px;">Profile</button>
-        ${isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditByRow(${r.rowNo})" style="padding:0 8px;">Edit</button>` : ''}
-        ${archiveBtn}
+        <button class="row-menu-btn" title="Actions" onclick="event.stopPropagation();openRowMenu(event, ${r.rowNo}, ${r.archived ? 'true' : 'false'})">⋯</button>
       </td>
     </tr>`;
   }).join('');
@@ -2015,6 +2018,49 @@ function renderTable(rows) {
   renderPagination(sorted.length);
   updateSelectAllState(pageRows);
 }
+
+// ── ROW ACTIONS MENU (⋯) ─────────────────────────────────────────────────
+// One shared floating menu (position:fixed, lives at the end of <body>)
+// instead of a button group per row. Keeps the table narrow — no more
+// side-scrolling just to reach Profile/Edit/Archive — and since it's
+// fixed-position rather than nested inside .table-wrap, it can't get
+// clipped by the wrap's overflow like the old profile-modal bug.
+function closeRowMenus() {
+  const menu = document.getElementById('rowActionMenu');
+  menu.classList.remove('open');
+  menu.innerHTML = '';
+}
+function openRowMenu(evt, rowNo, archived) {
+  const menu = document.getElementById('rowActionMenu');
+  const alreadyOpenForThisRow = menu.classList.contains('open') && menu.dataset.rowNo === String(rowNo);
+  closeRowMenus();
+  if (alreadyOpenForThisRow) return; // acts as a toggle when clicking the same row's button twice
+
+  const archiveItem = !isAdmin() ? '' : (archived
+    ? `<button onclick="event.stopPropagation();closeRowMenus();archiveSingle(${rowNo}, false)">Restore</button>`
+    : `<button class="danger-item" onclick="event.stopPropagation();closeRowMenus();archiveSingle(${rowNo}, true)">Archive</button>`);
+
+  menu.innerHTML = `
+    <button onclick="event.stopPropagation();closeRowMenus();openProfile(${rowNo})">Profile</button>
+    ${isAdmin() ? `<button onclick="event.stopPropagation();closeRowMenus();openEditByRow(${rowNo})">Edit</button>` : ''}
+    ${archiveItem}
+  `;
+  menu.dataset.rowNo = String(rowNo);
+  menu.classList.add('open');
+
+  const btnRect = evt.currentTarget.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - btnRect.bottom;
+  const openUpward = spaceBelow < menuRect.height + 12;
+
+  menu.style.left = Math.min(btnRect.right - menuRect.width, window.innerWidth - menuRect.width - 8) + 'px';
+  menu.style.top = openUpward
+    ? Math.max(8, btnRect.top - menuRect.height - 4) + 'px'
+    : (btnRect.bottom + 4) + 'px';
+}
+document.addEventListener('click', closeRowMenus);
+window.addEventListener('scroll', closeRowMenus, true);
+window.addEventListener('resize', closeRowMenus);
 
 function renderPagination(totalRows) {
   const bar = document.getElementById('paginationBar');
@@ -2072,7 +2118,7 @@ function filterTable() {
 function toggleRowSelect(rowNo, el) {
   if (el.checked) selectedRows.add(rowNo); else selectedRows.delete(rowNo);
   updateBulkBar();
-  document.querySelector(`tr[onclick="openEditByRow(${rowNo})"]`)?.classList.toggle('row-selected', el.checked);
+  document.querySelector(`tr[onclick="openProfile(${rowNo})"]`)?.classList.toggle('row-selected', el.checked);
 }
 
 function toggleSelectAll(el) {
