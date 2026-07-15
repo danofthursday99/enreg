@@ -480,6 +480,7 @@
       <button class="btn btn-ghost btn-sm" onclick="closeTemplateModal()">Cancel</button>
       <div class="ml-auto" style="display:flex;gap:8px;">
         <button class="btn btn-ghost btn-sm" onclick="previewTemplate()">Preview</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadTemplatePreview()">⬇ Download</button>
         <button class="btn btn-primary btn-sm" onclick="saveTemplate()">Save Template</button>
       </div>
     </div>
@@ -2865,6 +2866,56 @@ async function previewTemplate() {
     front.style.zIndex = '';
     front.style.boxShadow = 'none';
   }, 3500);
+}
+
+// Downloads a real PNG (front + back) using whatever is currently sitting in
+// the Template modal — including a design you just uploaded/picked or
+// placement numbers you just tweaked, even if you haven't hit "Save
+// Template" yet. Uses the same student sample as "Preview" (the profile
+// this modal was opened from, or a placeholder if none). This is separate
+// from the profile's own "Download ID" button, which always uses the
+// last-SAVED template — this one lets you check an in-progress edit by
+// actually holding the file, not just the 3-second on-screen flash.
+async function downloadTemplatePreview() {
+  const pending  = document.getElementById('tmplPreviewImg').dataset.pending;
+  const key      = document.getElementById('tmplKey').value;
+  const existing = getCardTemplate(key);
+  const image    = pending || (existing && existing.image);
+  if (!image) { toast('Upload or pick a template design first.', 'error'); return; }
+
+  const tmpl   = Object.assign({ image }, readTemplateFormValues());
+  const sample = allRecords.find(rec => rec.rowNo === profileRowNo) || {};
+  const data = {
+    fullName:     sample.fullName     || 'Juan Dela Cruz',
+    studentId:    sample.studentId    || 'CU-J00000',
+    photo:        sample.photo        || '',
+    originSchool: sample.originSchool || 'Tokyo Gakkan High Student',
+  };
+  const safeId = (data.studentId || data.fullName || 'template').toString().replace(/[^a-z0-9]/gi, '_');
+
+  try {
+    // ── FRONT: the design currently in this modal, not the saved one ──
+    await renderCardTemplate(tmpl, data);
+    const front = document.getElementById('idCardTemplate');
+    await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+    const frontCanvas = await html2canvas(front, { scale: 2.5, backgroundColor: '#ffffff' });
+
+    // ── BACK: the real, matching back design (unaffected by this modal) ──
+    const backColorKey = cardColorFor(sample.rowNo != null ? sample : { isCamp: false });
+    document.getElementById('idcBackImg').src = ID_CARD_ASSETS.backs[backColorKey] || ID_CARD_ASSETS.backs.blue;
+    const backEl     = document.getElementById('idCardBackTemplate');
+    const backCanvas = await html2canvas(backEl, { scale: 2.5, backgroundColor: '#ffffff' });
+
+    [['front', frontCanvas], ['back', backCanvas]].forEach(([side, canvas]) => {
+      const link = document.createElement('a');
+      link.download = `id_card_preview_${safeId}_${side}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+    toast('Preview downloaded — remember to Save Template to make it official.', 'success');
+  } catch (e) {
+    toast('Could not generate the preview image.', 'error');
+  }
 }
 
 // Populates the offscreen #idCardTemplate with a given student's FRONT design
