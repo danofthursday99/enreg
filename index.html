@@ -148,21 +148,41 @@
 
   /* ── LOGIN OVERLAY ────────────────────────────────────────────────── */
   .login-overlay {
-    position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;
-    background:
-      radial-gradient(circle at 18% 15%, rgba(37,99,235,.16), transparent 42%),
-      radial-gradient(circle at 84% 82%, rgba(29,78,216,.14), transparent 45%),
-      linear-gradient(160deg, #0F172A 0%, #1E293B 46%, #0F172A 100%);
-    overflow: hidden;
+    position: fixed; inset: 0; z-index: 2000; overflow: hidden;
   }
-  .login-overlay::before {
+  .login-overlay.hidden { display: none; }
+  .login-split { display: grid; grid-template-columns: 1.15fr .85fr; width: 100%; height: 100%; }
+  @media (max-width: 860px) { .login-split { grid-template-columns: 1fr; } .login-visual { display: none; } }
+
+  /* ── Left: educational branding panel ── */
+  .login-visual {
+    position: relative; overflow: hidden; color: #fff; padding: 56px 52px;
+    display: flex; flex-direction: column; justify-content: center;
+    background: linear-gradient(160deg, #0F172A 0%, #1E293B 46%, #0F172A 100%);
+  }
+  .login-visual::before {
     content: ''; position: absolute; inset: 0; opacity: .5; pointer-events: none;
     background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
     background-size: 44px 44px;
-    mask-image: radial-gradient(circle at 50% 40%, black, transparent 72%);
+    mask-image: radial-gradient(circle at 30% 35%, black, transparent 72%);
   }
-  .login-overlay.hidden { display: none; }
-  .login-card { position: relative; background: var(--surface); border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius-lg); box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.2); width: 100%; max-width: 384px; padding: 42px 36px; text-align: center; animation: loginPop .35s cubic-bezier(.2,.9,.3,1); }
+  .login-visual::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 18% 15%, rgba(37,99,235,.2), transparent 45%), radial-gradient(circle at 88% 88%, rgba(29,78,216,.16), transparent 50%);
+  }
+  .login-visual-content { position: relative; z-index: 1; max-width: 440px; }
+  .login-eyebrow { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); color: #BFDBFE; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 6px 13px; border-radius: 20px; margin-bottom: 22px; }
+  .login-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #60A5FA; }
+  .login-visual-title { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 36px; line-height: 1.2; letter-spacing: -.5px; margin-bottom: 16px; }
+  .login-visual-title em { font-style: normal; color: #93C5FD; }
+  .login-visual-sub { font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.65; margin-bottom: 34px; }
+  .login-features { display: flex; flex-direction: column; gap: 15px; }
+  .lf-item { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: rgba(255,255,255,.88); font-weight: 500; }
+  .lf-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+
+  /* ── Right: the actual login/sign-in panel ── */
+  .login-panel { background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 40px 30px; overflow-y: auto; }
+  .login-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 380px; padding: 40px 34px; text-align: center; animation: loginPop .35s cubic-bezier(.2,.9,.3,1); }
   @keyframes loginPop { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
   .login-logo-mark { width: 52px; height: 52px; background: linear-gradient(155deg, var(--accent) 0%, var(--accent-dk) 100%); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 23px; font-weight: 600; font-family: 'DM Serif Display', serif; margin: 0 auto 20px; box-shadow: 0 6px 16px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,.25); }
   .login-title { font-family: 'DM Serif Display', serif; font-size: 21px; font-weight: 400; margin-bottom: 7px; color: var(--ink); }
@@ -172,6 +192,9 @@
   .login-msg.show { display: block; }
   .login-msg.error { background: var(--danger-lt); color: var(--danger); border: 1px solid #FECACA; }
   .login-msg.info  { background: var(--accent-lt); color: var(--accent); border: 1px solid #BFDBFE; }
+  .login-alt { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .login-alt a { color: var(--accent-dk); font-weight: 700; text-decoration: none; }
+  .login-alt a:hover { text-decoration: underline; }
   .app-shell { display: none; }
   .app-shell.ready { display: block; }
   .user-chip { display: flex; align-items: center; gap: 8px; }
@@ -359,12 +382,29 @@
 
 <!-- LOGIN OVERLAY -->
 <div class="login-overlay" id="loginOverlay">
-  <div class="login-card">
-    <div class="login-logo-mark">E</div>
-    <div class="login-title">Enrollment Registry</div>
-    <div class="login-sub">Student records, enrollment, and ID cards — all in one place.<br>Sign in with your authorized Google account to continue.</div>
-    <div class="login-btn-wrap" id="gsiButtonWrap"></div>
-    <div class="login-msg" id="loginMsg"></div>
+  <div class="login-split">
+    <div class="login-visual">
+      <div class="login-visual-content">
+        <div class="login-eyebrow">Staff &amp; Admin Access</div>
+        <h1 class="login-visual-title">Every student's<br><em>journey</em>, organized.</h1>
+        <p class="login-visual-sub">The Enrollment Registry keeps enrollment, ID cards, and records for every campus in one clean, reliable place — built for the people who run the school day to day.</p>
+        <div class="login-features">
+          <div class="lf-item"><div class="lf-icon">🏫</div> Multi-campus student records</div>
+          <div class="lf-item"><div class="lf-icon">🪪</div> Instant, print-ready ID cards</div>
+          <div class="lf-item"><div class="lf-icon">📋</div> Enrollment history &amp; audit trail</div>
+        </div>
+      </div>
+    </div>
+    <div class="login-panel">
+      <div class="login-card">
+        <div class="login-logo-mark">E</div>
+        <div class="login-title">Enrollment Registry</div>
+        <div class="login-sub">Sign in with your authorized school Google account to continue.</div>
+        <div class="login-btn-wrap" id="gsiButtonWrap"></div>
+        <div class="login-msg" id="loginMsg"></div>
+        <div class="login-alt">Are you a student looking for your own profile, classmates, or school announcements?<br><a href="profile.html">Go to the Student Hub →</a></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1067,7 +1107,12 @@ async function handleCredentialResponse(response) {
       currentUserRole = data.role || 'admin';
       applyRolePermissions();
     } else if (data.code === 401) {
-      handleAuthError();
+      // This Google account isn't on the staff/admin whitelist — most likely
+      // a student or a brand-new account. Rather than dead-ending them with
+      // an error, send them to the Student Hub, which is the correct portal
+      // for that account type.
+      showLoginMsg("This account isn't set up for staff access. Redirecting you to the Student Hub…", 'info');
+      setTimeout(() => { window.location.href = 'profile.html'; }, 1800);
     } else {
       showLoginMsg('Connection error. Please try again.', 'error');
     }
