@@ -615,7 +615,7 @@
         <div class="field span-3">
           <label>Origin School / ID Card Descriptor <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
           <input type="text" id="m_originSchool" placeholder="e.g. Tokyo Gakkan High Student — shown on the ID card under the name">
-          <span class="field-hint">Printed as a line under the student's name on the ID card (front). Leave blank to omit.</span>
+          <span class="field-hint">Printed as a line under the student's name on the ID card (front). Auto-fills from a same-school match above once you type/pick a School — still fully editable. Leave blank to omit.</span>
         </div>
       </div>
     </div>
@@ -748,7 +748,7 @@
           <div class="field span-3">
             <label>Origin School / ID Card Descriptor <span style="color:var(--warn);font-size:10px;font-style:italic;">optional</span></label>
             <input type="text" id="originSchool" placeholder="e.g. Tokyo Gakkan High Student — shown on the ID card under the name">
-            <span class="field-hint">Printed as a line under the student's name on the ID card (front). Leave blank to omit.</span>
+            <span class="field-hint">Printed as a line under the student's name on the ID card (front). Auto-fills from a same-school match above once you type/pick a School — still fully editable. Leave blank to omit.</span>
           </div>
         </div>
         <div class="form-footer">
@@ -1317,9 +1317,12 @@ function getRowColor(isCamp, school) {
   return getSchoolColor(school);
 }
 
-// Auto-fills Date Started, Date Ended, and Graduation when a known school is typed.
-// Looks up existing records with the same school and copies their dates.
-// Dates remain editable after auto-fill.
+// Auto-fills Date Started/Ended/Graduation AND the ID Card Descriptor
+// (Origin School) when a known school is typed. Looks up existing records
+// with the same school and copies whatever they already have — dates, and
+// the descriptor text (e.g. "Tokyo Gakkan High Student"). Everything it
+// fills stays fully editable afterward, and it never overwrites a field
+// that's already got something typed in it.
 let _schoolFillTimer = null;
 function debouncedSchoolFill(prefix) {
   prefix = prefix || '';
@@ -1328,13 +1331,13 @@ function debouncedSchoolFill(prefix) {
   const val = document.getElementById(prefix + 'school').value.trim().toLowerCase();
   const knownSchools = loadSchools().map(s => s.toLowerCase());
   if (knownSchools.includes(val)) {
-    autoFillDatesFromSchool(prefix);
+    autoFillFromSchool(prefix);
   } else {
-    _schoolFillTimer = setTimeout(() => autoFillDatesFromSchool(prefix), 600);
+    _schoolFillTimer = setTimeout(() => autoFillFromSchool(prefix), 600);
   }
 }
 
-async function autoFillDatesFromSchool(prefix) {
+async function autoFillFromSchool(prefix) {
   prefix = prefix || '';
   const school = document.getElementById(prefix + 'school').value.trim();
   const hint   = document.getElementById(prefix + 'schoolDateHint');
@@ -1342,7 +1345,7 @@ async function autoFillDatesFromSchool(prefix) {
 
   // If records haven't been loaded yet (user is on Add tab), fetch them silently
   if (!allRecords.length) {
-    if (hint) { hint.textContent = 'Looking up dates…'; hint.style.color = 'var(--muted)'; }
+    if (hint) { hint.textContent = 'Looking up school info…'; hint.style.color = 'var(--muted)'; }
     try {
       const res  = await fetch(withAuth(GAS_URL + '?action=get'));
       const data = await res.json();
@@ -1355,31 +1358,53 @@ async function autoFillDatesFromSchool(prefix) {
     }
   }
 
-  // Find the most recently added record from the same school.
-  // Compare case-insensitively and trimmed so minor typing differences
+  // Every existing student from the same school, most-recently-added first.
+  // Compared case-insensitively and trimmed so minor typing differences
   // (e.g. "kagawa university" vs "Kagawa University") still match.
-  const schoolKey = school.trim().toLowerCase();
-  const match = [...allRecords].reverse().find(r =>
+  const schoolKey    = school.trim().toLowerCase();
+  const sameSchool   = [...allRecords].reverse().filter(r =>
     r.isCamp && (r.school || '').trim().toLowerCase() === schoolKey
   );
-  if (!match) { if (hint) hint.textContent = ''; return; }
+  const mostRecent = sameSchool[0];
+  if (!mostRecent) { if (hint) hint.textContent = ''; return; }
 
-  const started = toInputDate(match.dateStarted);
-  const ended   = toInputDate(match.dateEnded);
-  const grad    = toInputDate(match.dateGrad);
+  const started = toInputDate(mostRecent.dateStarted);
+  const ended   = toInputDate(mostRecent.dateEnded);
+  const grad    = toInputDate(mostRecent.dateGrad);
 
   // Only fill fields that are currently blank, so we never clobber a date
   // someone already typed or a value that was already saved on this record.
   const startedEl = document.getElementById(prefix + 'dateStarted');
   const endedEl   = document.getElementById(prefix + 'dateEnded');
   const gradEl    = document.getElementById(prefix + 'dateGrad');
-  if (started && !startedEl.value) startedEl.value = started;
-  if (ended   && !endedEl.value)   endedEl.value   = ended;
-  if (grad    && !gradEl.value)    gradEl.value    = grad;
+  let filledDates = false;
+  if (started && !startedEl.value) { startedEl.value = started; filledDates = true; }
+  if (ended   && !endedEl.value)   { endedEl.value   = ended;   filledDates = true; }
+  if (grad    && !gradEl.value)    { gradEl.value    = grad;    filledDates = true; }
+
+  // ID Card Descriptor (Origin School) — reuse whatever a previous student
+  // from this same school already had set (e.g. "Tokyo Gakkan High
+  // Student"). If nobody from this school has one yet, suggest a sensible
+  // default of "<School Name> Student" instead. Only fills if currently
+  // blank, and stays a normal editable text field either way.
+  let filledDescriptor = false;
+  const descEl = document.getElementById(prefix + 'originSchool');
+  if (descEl && !descEl.value.trim()) {
+    const withDescriptor = sameSchool.find(r => (r.originSchool || '').trim());
+    descEl.value = withDescriptor ? withDescriptor.originSchool.trim() : `${school} Student`;
+    filledDescriptor = true;
+  }
 
   if (hint) {
-    hint.textContent = `✓ Dates auto-filled from existing ${school} records — editable`;
-    hint.style.color = 'var(--success)';
+    if (filledDates || filledDescriptor) {
+      const parts = [];
+      if (filledDates)      parts.push('dates');
+      if (filledDescriptor) parts.push('ID card descriptor');
+      hint.textContent = `✓ Auto-filled ${parts.join(' & ')} from existing ${school} records — editable`;
+      hint.style.color = 'var(--success)';
+    } else {
+      hint.textContent = '';
+    }
   }
 }
 
