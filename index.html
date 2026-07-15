@@ -425,6 +425,19 @@
         <span class="field-hint">Each campus or camp school can have its own uploaded card design.</span>
       </div>
 
+      <div class="field" style="margin-bottom:16px;">
+        <label>Sample Data <span style="color:var(--warn);font-size:10px;font-style:italic;">for Preview / Download only</span></label>
+        <div class="tmpl-pos-grid">
+          <div class="field"><label>Name</label><input type="text" id="tmplSampleName" placeholder="Juan Dela Cruz"></div>
+          <div class="field"><label>ID Number</label><input type="text" id="tmplSampleId" placeholder="CU-J00000"></div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label>School (ID Card Descriptor)</label>
+          <input type="text" id="tmplSampleSchool" placeholder="Tokyo Gakkan High Student">
+        </div>
+        <span class="field-hint">Auto-fills from the student whose profile you opened this from — edit freely to test other names/IDs/schools. Doesn't touch any real record; only affects what "Preview" and "Download" show here.</span>
+      </div>
+
       <div id="tmplPreviewWrap" class="tmpl-preview-wrap" style="display:none;">
         <img id="tmplPreviewImg" alt="Template preview">
       </div>
@@ -2681,16 +2694,22 @@ function templateKeyFor(r) { return (r.isCamp && r.school) ? r.school : (r.campu
 function openTemplateModal() {
   const sel = document.getElementById('tmplKey');
   const schools = loadSchools();
-  const currentKey = (() => {
-    const r = allRecords.find(rec => rec.rowNo === profileRowNo);
-    return r ? templateKeyFor(r) : 'default';
-  })();
+  const profileRec = allRecords.find(rec => rec.rowNo === profileRowNo);
+  const currentKey = profileRec ? templateKeyFor(profileRec) : 'default';
   sel.innerHTML = '<option value="default">Default (all cards)</option>'
     + CAMPUS_LIST.map(c => `<option value="${c}">${c} (regular)</option>`).join('')
     + schools.map(s => `<option value="${s.replace(/"/g,'&quot;')}">${s} (camp)</option>`).join('');
   if ([...sel.options].some(o => o.value === currentKey)) sel.value = currentKey;
   loadTemplateIntoForm();
   renderPresetGallery();
+
+  // Sample Data — defaults to whichever student's profile this was opened
+  // from (so Preview/Download look "real" right away), but stays fully
+  // editable and never touches the actual record.
+  document.getElementById('tmplSampleName').value   = (profileRec && profileRec.fullName)     || 'Juan Dela Cruz';
+  document.getElementById('tmplSampleId').value     = (profileRec && profileRec.studentId)    || 'CU-J00000';
+  document.getElementById('tmplSampleSchool').value = (profileRec && profileRec.originSchool) || 'Tokyo Gakkan High Student';
+
   document.getElementById('templateModal').classList.add('open');
 }
 function closeTemplateModal() {
@@ -2840,6 +2859,20 @@ function renderCardTemplate(tmpl, data) {
 }
 
 // Briefly flashes the offscreen card on-screen so the user can check placement.
+// Reads the Sample Data fields (Name / ID Number / School) from the
+// Template modal — editable by the user, pre-filled from whichever
+// profile the modal was opened from. Photo isn't editable here, so it
+// still comes straight from that profile (blank if none open).
+function readSampleTemplateData() {
+  const sample = allRecords.find(rec => rec.rowNo === profileRowNo) || {};
+  return {
+    fullName:     document.getElementById('tmplSampleName').value.trim()   || 'Juan Dela Cruz',
+    studentId:    document.getElementById('tmplSampleId').value.trim()     || 'CU-J00000',
+    photo:        sample.photo || '',
+    originSchool: document.getElementById('tmplSampleSchool').value.trim() || 'Tokyo Gakkan High Student',
+  };
+}
+
 async function previewTemplate() {
   const pending = document.getElementById('tmplPreviewImg').dataset.pending;
   const key = document.getElementById('tmplKey').value;
@@ -2847,13 +2880,7 @@ async function previewTemplate() {
   const image = pending || (existing && existing.image);
   if (!image) { toast('Upload a design image first.', 'error'); return; }
   const tmpl = Object.assign({ image }, readTemplateFormValues());
-  const sample = allRecords.find(rec => rec.rowNo === profileRowNo) || {};
-  await renderCardTemplate(tmpl, {
-    fullName: sample.fullName || 'Juan Dela Cruz',
-    studentId: sample.studentId || 'CU-J00000',
-    photo: sample.photo || '',
-    originSchool: sample.originSchool || 'Tokyo Gakkan High Student',
-  });
+  await renderCardTemplate(tmpl, readSampleTemplateData());
   const front = document.getElementById('idCardTemplate');
   front.style.top = '20px';
   front.style.left = '20px';
@@ -2871,10 +2898,9 @@ async function previewTemplate() {
 // Downloads a real PNG (front + back) using whatever is currently sitting in
 // the Template modal — including a design you just uploaded/picked or
 // placement numbers you just tweaked, even if you haven't hit "Save
-// Template" yet. Uses the same student sample as "Preview" (the profile
-// this modal was opened from, or a placeholder if none). This is separate
-// from the profile's own "Download ID" button, which always uses the
-// last-SAVED template — this one lets you check an in-progress edit by
+// Template" yet. Uses the same editable Sample Data as "Preview". This is
+// separate from the profile's own "Download ID" button, which always uses
+// the last-SAVED template — this one lets you check an in-progress edit by
 // actually holding the file, not just the 3-second on-screen flash.
 async function downloadTemplatePreview() {
   const pending  = document.getElementById('tmplPreviewImg').dataset.pending;
@@ -2884,13 +2910,8 @@ async function downloadTemplatePreview() {
   if (!image) { toast('Upload or pick a template design first.', 'error'); return; }
 
   const tmpl   = Object.assign({ image }, readTemplateFormValues());
+  const data   = readSampleTemplateData();
   const sample = allRecords.find(rec => rec.rowNo === profileRowNo) || {};
-  const data = {
-    fullName:     sample.fullName     || 'Juan Dela Cruz',
-    studentId:    sample.studentId    || 'CU-J00000',
-    photo:        sample.photo        || '',
-    originSchool: sample.originSchool || 'Tokyo Gakkan High Student',
-  };
   const safeId = (data.studentId || data.fullName || 'template').toString().replace(/[^a-z0-9]/gi, '_');
 
   try {
